@@ -1,0 +1,20 @@
+".\Objects\STARTUP_CMS8S6990.obj",
+".\Objects\main.obj",
+".\Objects\gpio.obj",
+".\Objects\ADCCfg.obj",
+".\Objects\delay.obj",
+".\Objects\NTC.obj",
+".\Objects\SideKey.obj",
+".\Objects\LEDMgmt.obj",
+".\Objects\PWM.obj",
+".\Objects\OutputChannel.obj",
+".\Objects\Watchdog.obj",
+".\Objects\BattVoltDisplay.obj",
+".\Objects\TempControl.obj",
+".\Objects\Sleep.obj",
+".\Objects\ModeControl.obj",
+".\Objects\RampConfig.obj",
+".\Objects\SelfTest.obj" 
+TO ".\Objects\XRLite" 
+
+PRINT(".\Listings\XRLite.map")

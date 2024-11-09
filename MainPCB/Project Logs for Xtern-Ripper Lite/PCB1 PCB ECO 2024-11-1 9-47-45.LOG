@@ -1,0 +1,18 @@
+Added Component: Designator=C2(1210C)
+Added Component: Designator=C4(1210C)
+Added Component: Designator=C5(1210C)
+Added Component: Designator=C6(1210C)
+Added Pin To Net: NetName=GND Pin=C2-1
+Added Pin To Net: NetName=GND Pin=C4-1
+Added Pin To Net: NetName=GND Pin=C5-1
+Added Pin To Net: NetName=GND Pin=C6-1
+Added Pin To Net: NetName=VLED+ Pin=C2-2
+Added Pin To Net: NetName=VLED+ Pin=C4-2
+Added Pin To Net: NetName=VLED+ Pin=C5-2
+Added Pin To Net: NetName=VLED+ Pin=C6-2
+Added Pin To Net: NetName=VLED+ Pin=L1-2
+Added Net: Name=VLED+
+Added Member To Class: ClassName=main Member=Component C2 CC1210KKX5RBB476
+Added Member To Class: ClassName=main Member=Component C4 CC1210KKX5RBB476
+Added Member To Class: ClassName=main Member=Component C5 CC1210KKX5RBB476
+Added Member To Class: ClassName=main Member=Component C6 CC1210KKX5RBB476

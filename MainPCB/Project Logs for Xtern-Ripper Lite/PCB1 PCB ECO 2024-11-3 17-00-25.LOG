@@ -1,0 +1,34 @@
+Change Component Comment : Designator=R10 Old Comment=1R0 New Comment=R500 ±5% 1W
+Change Component Comment : Designator=D2 Old Comment=4V7 New Comment=BZT52C3V9S W5
+Change Component Comment : Designator=Q4 Old Comment=BSZ011NE2LS5 New Comment=BSZ011NE2LS5IATMA1
+Change Component Comment : Designator=Q5 Old Comment=BSZ011NE2LS5 New Comment=BSZ011NE2LS5IATMA1
+Change Component Comment : Designator=Q6 Old Comment=BSZ025N04 New Comment=BSZ050N03MSG
+Change Component Comment : Designator=C2 Old Comment=CC1210KKX5RBB476 New Comment=EMK325ABJ107MM-T
+Change Component Comment : Designator=C3 Old Comment=CC1210KKX5RBB476 New Comment=EMK325ABJ107MM-T
+Change Component Comment : Designator=C4 Old Comment=CC1210KKX5RBB476 New Comment=EMK325ABJ107MM-T
+Change Component Comment : Designator=C5 Old Comment=CC1210KKX5RBB476 New Comment=EMK325ABJ107MM-T
+Change Component Comment : Designator=C6 Old Comment=CC1210KKX5RBB476 New Comment=EMK325ABJ107MM-T
+Change Component Comment : Designator=U5 Old Comment=CM8S6990NA-QFN20 New Comment=CMS8S6990NAQN20
+Change Component Comment : Designator=U3 Old Comment=NC7SB3157P6X New Comment=CH443K
+Change Component Comment : Designator=R8 Old Comment=R005 New Comment=BVT-I-R003-1.0
+Change Component Comment : Designator=C1 Old Comment=TCN4107M035 New Comment=TCN4107M035R0100E
+Change Component Comment : Designator=Q11 Old Comment=XP6601 New Comment=DMG6601LVT-7
+Change Component Comment : Designator=Q1 Old Comment=XPX80P02RX New Comment=AP80P02DF
+Change Component Comment : Designator=Q2 Old Comment=XPX80P02RX New Comment=AP80P02DF
+Change Component Comment : Designator=Q3 Old Comment=XPX80P02RX New Comment=AP80P02DF
+Change Component Description : Designator=C2 Old Description=1210 MLCC X5R 16V 10% New Description=1210尺寸多层陶瓷电容器(MLCC) X5R材质，16V 100uF±20%
+Change Component Description : Designator=C3 Old Description=1210 MLCC X5R 16V 10% New Description=1210尺寸多层陶瓷电容器(MLCC) X5R材质，16V 100uF±20%
+Change Component Description : Designator=C4 Old Description=1210 MLCC X5R 16V 10% New Description=1210尺寸多层陶瓷电容器(MLCC) X5R材质，16V 100uF±20%
+Change Component Description : Designator=C5 Old Description=1210 MLCC X5R 16V 10% New Description=1210尺寸多层陶瓷电容器(MLCC) X5R材质，16V 100uF±20%
+Change Component Description : Designator=C6 Old Description=1210 MLCC X5R 16V 10% New Description=1210尺寸多层陶瓷电容器(MLCC) X5R材质，16V 100uF±20%
+Change Component Description : Designator=C1 Old Description=Capacitor New Description=京瓷/AVX 贴片聚合物钽电容器 35V 100uF ±20% 2924 ESR=100mΩ
+Change Component Description : Designator=U3 Old Description=Low-Voltage Analog Switch SPDT,1.8-5V Power New Description=Low-Voltage Analog Switch SPDT,1.8-5V Power(can be replaced by NC7SB3157P6X)
+Change Component Description : Designator=Q6 Old Description=PDFN3x3 -20V -80A 4.0mΩ P-Ch MOSFET New Description=PDFN3x3 30V 45A 4.6mΩ OptiMOS-3 N沟道MOSFET
+Change Component Description : Designator=Q4 Old Description=PDFN3x3 -20V -80A 4.0mΩ P-Ch MOSFET New Description=PDFN3x3 37nC 25V 40A 1.1mΩ OptiMOS-5 N沟道MOSFET
+Change Component Description : Designator=Q5 Old Description=PDFN3x3 -20V -80A 4.0mΩ P-Ch MOSFET New Description=PDFN3x3 37nC 25V 40A 1.1mΩ OptiMOS-5 N沟道MOSFET
+Change Component Description : Designator=Q1 Old Description=PDFN3x3 -20V -80A 4.0mΩ P-Ch MOSFET New Description=永源微 PDFN3x3-8L -20V -80A 4.0mΩ P沟道MOSFET
+Change Component Description : Designator=Q2 Old Description=PDFN3x3 -20V -80A 4.0mΩ P-Ch MOSFET New Description=永源微 PDFN3x3-8L -20V -80A 4.0mΩ P沟道MOSFET
+Change Component Description : Designator=Q3 Old Description=PDFN3x3 -20V -80A 4.0mΩ P-Ch MOSFET New Description=永源微 PDFN3x3-8L -20V -80A 4.0mΩ P沟道MOSFET
+Change Component Description : Designator=R10 Old Description=Resistor New Description=1206厚膜采样电阻 0.5Ω ±5% 1W
+Change Component Description : Designator=R8 Old Description=Resistor New Description=德国伊萨ISA精密检流电阻，2512 3mΩ±1% <50ppm/K
+Change Component Description : Designator=D2 Old Description=稳压二极管 New Description=SOD-323封装贴片稳压二极管，3.9V 200mW

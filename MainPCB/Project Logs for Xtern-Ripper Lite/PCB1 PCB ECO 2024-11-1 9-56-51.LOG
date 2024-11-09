@@ -1,0 +1,13 @@
+Added Component: Designator=C8(0402_C)
+Added Component: Designator=R2(0402_R)
+Added Pin To Net: NetName=BST Pin=C8-2
+Added Pin To Net: NetName=BST Pin=U1-23
+Added Net: Name=BST
+Added Pin To Net: NetName=NetC8_1 Pin=C8-1
+Added Pin To Net: NetName=NetC8_1 Pin=R2-1
+Added Net: Name=NetC8_1
+Added Pin To Net: NetName=PHASE Pin=R2-2
+Added Pin To Net: NetName=PHASE Pin=U1-24
+Added Net: Name=PHASE
+Added Member To Class: ClassName=main Member=Component C8 220nF (224) 10% 16V
+Added Member To Class: ClassName=main Member=Component R2 0¦¸ (0R0) ¡À1%

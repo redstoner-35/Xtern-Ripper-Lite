@@ -1,0 +1,210 @@
+C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/09/2024 20:20:23 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE OUTPUTCHANNEL
+OBJECT MODULE PLACED IN .\Objects\OutputChannel.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Hardware\OutputChannel.c OMF2 OPTIMIZE(9,SPEED) BROWSE INCDIR(.\include;
+                    -.\StdDriver\inc;.\Hardware) DEBUG PRINT(.\Listings\OutputChannel.lst) TABS(2) OBJECT(.\Objects\OutputChannel.obj)
+
+line level    source
+
+   1          #include "cms8s6990.h"
+   2          #include "PinDefs.h"
+   3          #include "GPIO.h"
+   4          #include "PWMCfg.h"
+   5          #include "delay.h"
+   6          #include "ModeControl.h"
+   7          #include "OutputChannel.h"
+   8          #include "ADCCfg.h"
+   9          #include "Watchdog.h"
+  10          
+  11          //ÄÚ²¿SFR
+  12          sbit RevPGate=RevProtIOP^RevProtIOx; //·´½Ó±£»¤MOSFET
+  13          sbit DCDCEN=DCDCENIOP^DCDCENIOx; //DCDCÊ¹ÄÜ¹¦ÄÜ
+  14          sbit LShuntSEL=LShuntSelIOP^LShuntSelIOx; //µÍÁÁÔÂ¹âµµ×¨ÓÃ·ÖÁ÷Æ÷Ñ¡ÔñÎ»
+  15          sbit HShuntSEL=HShuntSelIOP^HShuntSelIOx; //Ö÷Êä³ö·ÖÁ÷Æ÷Ñ¡ÔñÎ»
+  16          
+  17          //ÄÚ²¿±äÁ¿
+  18          xdata int Current; //Ä¿±êµçÁ÷(mA)
+  19          static xdata int CurrentBuf;
+  20          
+  21          //³õÊ¼»¯º¯Êý
+  22          void OutputChannel_Init(void)
+  23            {
+  24   1        GPIOCfgDef OCInitCfg;
+  25   1        //ÉèÖÃ½á¹¹Ìå
+  26   1        OCInitCfg.Mode=GPIO_Out_PP;
+  27   1        OCInitCfg.Slew=GPIO_Fast_Slew;    
+  28   1        OCInitCfg.DRVCurrent=GPIO_High_Current; //ÍÆMOSFET,ÐèÒª¸ßÉÏÉýÐ±ÂÊ
+  29   1        //³õÊ¼»¯bit
+  30   1        RevPGate=0;
+  31   1        DCDCEN=0;
+  32   1        LShuntSEL=0;
+  33   1        HShuntSEL=0;
+  34   1        //¿ªÊ¼ÅäÖÃIO  
+  35   1        GPIO_ConfigGPIOMode(RevProtIOG,GPIOMask(RevProtIOx),&OCInitCfg);  
+  36   1        GPIO_ConfigGPIOMode(DCDCENIOG,GPIOMask(DCDCENIOx),&OCInitCfg);    
+  37   1        GPIO_ConfigGPIOMode(LShuntSelIOG,GPIOMask(LShuntSelIOx),&OCInitCfg);    
+  38   1        GPIO_ConfigGPIOMode(HShuntSelIOG,GPIOMask(HShuntSelIOx),&OCInitCfg);      
+  39   1        //ÏµÍ³ÉÏµçÊ±µçÁ÷ÅäÖÃÎª0
+  40   1        Current=0;
+  41   1        CurrentBuf=0;
+  42   1        }
+  43          
+  44          //Êä³öÍ¨µÀ²âÊÔÔËÐÐ
+  45          void OutputChannel_TestRun(void)
+  46            {
+  47   1        int retry=64,i;
+  48   1        xdata float LastOutput[5]={0};
+  49   1        float buf,Err;
+  50   1        //¼ì²éÊÇ·ñÓÉ¿´ÃÅ¹·µ¼ÖÂ¸´Î»  
+  51   1        if(GetIfWDogCauseRST()) 
+  52   1          {
+  53   2          ErrCode=Fault_MPUHang; //Ö¸Ê¾¹ÊÕÏÓÉµ¥Æ¬»úËÀ»úµ¼ÖÂ
+  54   2          if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //Ö¸Ê¾¹ÊÕÏ·¢Éú
+C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/09/2024 20:20:23 PAGE 2   
+
+  55   2          return;
+  56   2          }
+  57   1        //×¼±¸Æô¶¯Êä³ö
+  58   1        if(Data.RawBattVolt<5.5)return; //ÊäÈëµçÑ¹¹ýµÍ±ÜÃâÎó±¨£¬Ìø¹ý¼ì²â
+  59   1        LShuntSEL=0;
+  60   1        HShuntSEL=0;
+  61   1        RevPGate=0; //¹Ø±Õ·À·´½Ó¼ì²âPIN
+  62   1        PWM_ForceSetDuty(1); //´ò¿ªPWMDACÊä³öÒ»¸ö³õÖµ   
+  63   1        DCDCEN=1; //ÁîDCDCEN=1
+  64   1        //µÈ´ýDCDCÆô¶¯  
+  65   1        do
+  66   1          {
+  67   2          delay_ms(5);
+  68   2          SystemTelemHandler();
+  69   2          if(Data.OutputVoltage>7.1)break; //Êä³öµçÑ¹Õý³£
+  70   2          retry--;
+  71   2          }
+  72   1        while(retry>0);
+  73   1        //DCDCÆô¶¯Ê§°Ü
+  74   1        if(retry==0)
+  75   1          {
+  76   2          DCDCEN=0; //ÁîDCDCEN=0
+  77   2          ErrCode=Fault_DCDCFailedToStart;
+  78   2          if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //Ö¸Ê¾¹ÊÕÏ·¢Éú
+  79   2          return;
+  80   2          }
+  81   1        //½øÐÐÊä³öEN¿ØÖÆµÄ¼ì²â
+  82   1        retry=100; //¸´Î»ÑÓÊ±µÈ´ý
+  83   1        DCDCEN=0; //ÁîDCDCEN=0
+  84   1        delay_ms(20); //ÑÓ³Ù20ms
+  85   1        PWM_ForceSetDuty(0); //¹Ø±ÕPWMDAC
+  86   1        do
+  87   1          {
+  88   2          SystemTelemHandler();
+  89   2          delay_ms(10);
+  90   2          //¸üÐÂÊý¾Ý
+  91   2          for(i=4;i>0;i--)LastOutput[i]=LastOutput[i-1];  
+  92   2          LastOutput[0]=Data.OutputVoltage;
+  93   2          //ÇóÆ½¾ù  
+  94   2          buf=0;
+  95   2          for(i=0;i<5;i++)buf+=LastOutput[i];
+  96   2          buf/=(float)5;      
+  97   2          //ÇóÊý¾ÝÀïÃæÃ¿×éÊý¾ÝµÄ²î¾à
+  98   2          Err=0;  
+  99   2          for(i=0;i<5;i++)Err+=fabs(buf-LastOutput[i]);
+ 100   2          if(retry<93&&Err>0.5)break; //Êä³öµçÑ¹Õý³£Ë¥¼õÖÐ£¬µôµç
+ 101   2          retry--;
+ 102   2          }
+ 103   1        while(retry>0);
+ 104   1        //DCDCÍ£Ö¹Ê§°Ü£¬EN²»ÊÜ¿Ø£¬±¨´í
+ 105   1        if(retry==0)
+ 106   1          {
+ 107   2          ErrCode=Fault_DCDCENOOC;
+ 108   2          if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //Ö¸Ê¾¹ÊÕÏ·¢Éú
+ 109   2          }
+ 110   1        } 
+ 111            
+ 112          //Êä³öÍ¨µÀ½øÈëÐÝÃßµÄ²Ù×÷
+ 113          void OutputChannel_DeInit(void)
+ 114            {
+ 115   1        //¸´Î»µçÁ÷»º³åÆ÷
+ 116   1        Current=0;
+C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/09/2024 20:20:23 PAGE 3   
+
+ 117   1        CurrentBuf=0;
+ 118   1        //¹Ø±ÕËùÓÐÊä³ö
+ 119   1        RevPGate=0;
+ 120   1        DCDCEN=0;
+ 121   1        LShuntSEL=0;
+ 122   1        HShuntSEL=0;  
+ 123   1        }
+ 124            
+ 125          //ÄÚ²¿ÓÃÓÚ¼ÆËãPWMDACÕ¼¿Õ±ÈµÄº¯Êý  
+ 126          static float Duty_Calc(float ShuntmOhm,int Current,float Offset)
+ 127            {
+ 128   1        float buf;
+ 129   1        buf=((float)Current*Offset)*ShuntmOhm; //ÊäÈë´«½øÀ´µÄµçÁ÷(mA)²¢³ËÒÔ¼ìÁ÷µç×è×èÖµ(mR)µÃµ½ÔË·Å¶ËÕû¶¨µçÑ¹(uV)
+ 130   1        buf/=(float)1000; //uV×ªmV
+ 131   1        buf/=((float)VdivDownResK/(float)(VdivUpResK+VdivDownResK+PWMDACResK)); //½«ÔË·Å¶ËÕû¶¨µçÑ¹³ýÒÔµç×èµÄ·ÖÑ¹±
+             -ÈÀýµÃµ½DAC¶ËµÄµçÑ¹
+ 132   1        buf/=Data.MCUVDD*(float)1000; //¼ÆËã³öÄ¿±êDACÊä³öµçÑ¹ºÍPWMDAC»º³åÆ÷¹©µçµçÑ¹(MCUVDD)Ö®¼äµÄ±ÈÖµ
+ 133   1        buf*=100; //×ª»»Îª°Ù·Ö±È
+ 134   1        //½øÐÐÏÞ·ùºÍ½á¹ûÊä³ö  
+ 135   1        if(buf>100)buf=100;
+ 136   1        if(buf<0)buf=0;
+ 137   1        return buf;
+ 138   1        }
+ 139            
+ 140          //Êä³öÍ¨µÀ¼ÆËã
+ 141          void OutputChannel_Calc(void)
+ 142            {
+ 143   1        //±ÜÃâÎÞÐ§µÄÖØ¸´¼ÆËã
+ 144   1        if(CurrentBuf==Current)return;
+ 145   1        CurrentBuf=Current;
+ 146   1        //µçÁ÷Ð¡ÓÚµÈÓÚ0£¬¹Ø±ÕËùÓÐÊä³ö
+ 147   1        if(CurrentBuf<=0)
+ 148   1          {
+ 149   2          PWMDuty=0;
+ 150   2          RevPGate=CurrentBuf==-1?1:0;
+ 151   2          DCDCEN=0;
+ 152   2          LShuntSEL=0;
+ 153   2          HShuntSEL=0;
+ 154   2          }
+ 155   1        //Ê¹ÓÃ¸¨ÖúÍ¨µÀ
+ 156   1        else if(CurrentBuf<AUXChannelImax)
+ 157   1          {
+ 158   2          PWMDuty=Duty_Calc(AUXChannelShuntmOhm,CurrentBuf,LowShuntIOffset);
+ 159   2          RevPGate=Data.MCUVDD<9.5?1:0;   //µÍÊä³öµçÁ÷ÇÒÊäÈë¹¦ÂÊ²»´óÊ±ÏÂ¹Ø±Õ·À·´½ÓFET½ÚÊ¡ÄÜÁ¿
+ 160   2          DCDCEN=1;
+ 161   2          LShuntSEL=1;  
+ 162   2          HShuntSEL=0;  //Æô¶¯DCDC£¬Ñ¡ÔñµÍÁ¿³ÌÍ¨µÀ
+ 163   2          }
+ 164   1        //µçÁ÷´óÓÚ¸¨ÖúÍ¨µÀÉÏÏÞ£¬Ê¹ÓÃÖ÷Í¨µÀ
+ 165   1        else
+ 166   1          {
+ 167   2          PWMDuty=Duty_Calc(MainChannelShuntmOhm,CurrentBuf,HighShuntIOffset);
+ 168   2          RevPGate=1;   //Ö÷Êä³öÆôÓÃ£¬´ò¿ª·À·´½ÓFETÌá¸ßÄÜÐ§
+ 169   2          DCDCEN=1;
+ 170   2          LShuntSEL=0;  
+ 171   2          HShuntSEL=1;  //Æô¶¯DCDC£¬Ñ¡Ôñ¸ßÁ¿³ÌÍ¨µÀ
+ 172   2          } 
+ 173   1        //PWMÕ¼¿Õ±È·¢Éú±ä¸ü£¬¸üÐÂÊä³ö
+ 174   1        IsNeedToUploadPWM=1;
+ 175   1        }
+
+
+C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/09/2024 20:20:23 PAGE 4   
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1136    ----
+   CONSTANT SIZE    =     20    ----
+   XDATA SIZE       =      4      20
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      29
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

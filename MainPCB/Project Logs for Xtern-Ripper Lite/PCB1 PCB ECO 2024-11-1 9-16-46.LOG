@@ -1,0 +1,42 @@
+Added Component: Designator=C1(TCN4)
+Added Component: Designator=Q1(DFN-8_L3.0-W3.0-P0.65-BL)
+Added Component: Designator=Q2(DFN-8_L3.0-W3.0-P0.65-BL)
+Added Component: Designator=Q3(DFN-8_L3.0-W3.0-P0.65-BL)
+Added Component: Designator=R1(0402_R)
+Added Pin To Net: NetName=12V Pin=C1-1
+Added Pin To Net: NetName=12V Pin=Q1-1
+Added Pin To Net: NetName=12V Pin=Q1-2
+Added Pin To Net: NetName=12V Pin=Q1-3
+Added Pin To Net: NetName=12V Pin=Q2-1
+Added Pin To Net: NetName=12V Pin=Q2-2
+Added Pin To Net: NetName=12V Pin=Q2-3
+Added Pin To Net: NetName=12V Pin=Q3-1
+Added Pin To Net: NetName=12V Pin=Q3-2
+Added Pin To Net: NetName=12V Pin=Q3-3
+Added Pin To Net: NetName=12V Pin=R1-2
+Added Net: Name=12V
+Added Pin To Net: NetName=GND Pin=C1-2
+Added Net: Name=GND
+Added Pin To Net: NetName=GRP Pin=Q1-4
+Added Pin To Net: NetName=GRP Pin=Q2-4
+Added Pin To Net: NetName=GRP Pin=Q3-4
+Added Pin To Net: NetName=GRP Pin=R1-1
+Added Net: Name=GRP
+Added Pin To Net: NetName=VBAT Pin=Q1-5
+Added Pin To Net: NetName=VBAT Pin=Q1-6
+Added Pin To Net: NetName=VBAT Pin=Q1-7
+Added Pin To Net: NetName=VBAT Pin=Q1-8
+Added Pin To Net: NetName=VBAT Pin=Q1-8
+Added Pin To Net: NetName=VBAT Pin=Q2-5
+Added Pin To Net: NetName=VBAT Pin=Q2-6
+Added Pin To Net: NetName=VBAT Pin=Q2-7
+Added Pin To Net: NetName=VBAT Pin=Q2-8
+Added Pin To Net: NetName=VBAT Pin=Q2-8
+Added Pin To Net: NetName=VBAT Pin=Q3-5
+Added Pin To Net: NetName=VBAT Pin=Q3-6
+Added Pin To Net: NetName=VBAT Pin=Q3-7
+Added Pin To Net: NetName=VBAT Pin=Q3-8
+Added Pin To Net: NetName=VBAT Pin=Q3-8
+Added Net: Name=VBAT
+Added Class: Name=main
+Added Room: Name=main

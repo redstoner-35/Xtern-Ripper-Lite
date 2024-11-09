@@ -1,0 +1,10 @@
+Added Component: Designator=R28(0402_R)
+Added Pin To Net: NetName=5V Pin=R28-2
+Added Pin To Net: NetName=GLED Pin=U5-18
+Added Net: Name=GLED
+Added Pin To Net: NetName=KEY Pin=R28-1
+Added Pin To Net: NetName=KEY Pin=U5-16
+Added Net: Name=KEY
+Added Pin To Net: NetName=RLED Pin=U5-17
+Added Net: Name=RLED
+Added Member To Class: ClassName=main Member=Component R28 10K¦¸ (1002) ¡À1%

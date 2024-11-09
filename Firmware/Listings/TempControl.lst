@@ -1,0 +1,163 @@
+C51 COMPILER V9.60.0.0   TEMPCONTROL                                                       11/09/2024 20:18:37 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE TEMPCONTROL
+OBJECT MODULE PLACED IN .\Objects\TempControl.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Logic\TempControl.c OMF2 OPTIMIZE(9,SPEED) BROWSE INCDIR(.\include;.\Std
+                    -Driver\inc;.\Hardware) DEBUG PRINT(.\Listings\TempControl.lst) TABS(2) OBJECT(.\Objects\TempControl.obj)
+
+line level    source
+
+   1          #include "ADCCfg.h"
+   2          #include "LEDMgmt.h"
+   3          #include "delay.h"
+   4          #include "ModeControl.h"
+   5          #include "OutputChannel.h"
+   6          #include "cms8s6990.h"
+   7          #include "PWMCfg.h"
+   8          
+   9          //PIª∑≤Œ ˝∫Õ◊Ó–°µÁ¡˜œﬁ÷∆
+  10          #define ProtFullScale 18000 //PIª∑ ‰≥ˆµƒœ∏∑÷÷µ
+  11          #define IntegrateFullScale 12000 //ª˝∑÷µƒFull Scale
+  12          #define IntegralFactor 150 //ª˝∑÷œµ ˝(‘Ω¥Û ±º‰≥£ ˝‘Ω∏ﬂ)
+  13          #define MinumumILED 900 //ΩµµµœµÕ≥À˘ƒ‹¥ÔµΩµƒ◊ÓµÕµÁ¡˜(mA)
+  14          
+  15          //Œ¬∂»≈‰÷√
+  16          #define ForceOffTemp 75 //π˝»»πÿª˙Œ¬∂»
+  17          #define ForceDisableTurboTemp 60 //≥¨π˝¥ÀŒ¬∂»Œﬁ∑®Ω¯»Îº´¡¡
+  18          #define ConstantTemperature 52 //Œ¬øÿ∆Ù∂Ø∫ÛŒ¨≥÷µƒŒ¬∂»
+  19          
+  20          //Œ¬∂»øÿ÷∆”√»´æ÷±‰¡ø
+  21          static int TempIntegral=0;
+  22          static int TempProtBuf=0;
+  23          bit IsTempLIMActive=0;  //Œ¬øÿ «∑Ò“—æ≠∆Ù∂Ø
+  24          bit IsDisableTurbo=0;  //Ω˚÷π‘Ÿ∂»Ω¯»ÎµΩº´¡¡µµ
+  25          bit IsForceLeaveTurbo=0; // «∑Ò«ø÷∆¿Îø™º´¡¡µµ
+  26          
+  27          //…œµÁ ±ºÏ≤‚NTC◊¥Ã¨
+  28          void CheckNTCStatus(void)
+  29            {
+  30   1        char i=64;
+  31   1        //ºÏ≤ÈŒ¬∂» ˝æ›
+  32   1        do
+  33   1          {
+  34   2          delay_ms(10);
+  35   2          SystemTelemHandler();
+  36   2          if(Data.IsNTCOK)break; //NTC“—æ≠’˝≥£π§◊˜£¨ÕÀ≥ˆºÏ≤‚
+  37   2          i--;
+  38   2          }   
+  39   1        while(i);
+  40   1        if(!i) //æ≠π˝0.64√Îµƒµ»¥˝»‘»ª≤ª¥Ô±Í£¨±®¥Ì
+  41   1          {
+  42   2          LEDMode=LED_Amber; 
+  43   2          LEDControlHandler(); //NTC◊‘ºÏ≤ªÕ®π˝£¨ª∆µ∆≥£¡¡
+  44   2          while(1); //À¿—≠ª∑
+  45   2          }
+  46   1        }
+  47          
+  48          //±»¿˝∫Õª˝∑÷‘ÀÀ„Ω·π˚∞Ÿ∑÷±»œﬁ∑˘
+  49          static float PresentLIM(float IN)
+  50            {
+  51   1        if(IN>100)return 100;
+  52   1        if(IN<0)return 0;  
+  53   1        //∫œ∑® ˝÷µ‘≠¬∑∑µªÿ
+  54   1        return IN;
+C51 COMPILER V9.60.0.0   TEMPCONTROL                                                       11/09/2024 20:18:37 PAGE 2   
+
+  55   1        } 
+  56            
+  57          // ‰≥ˆœﬁ¡˜÷µµƒ∞Ÿ∑÷±»
+  58          int ThermalILIMCalc(int Input)
+  59            {
+  60   1        float buf,ILED,itgbuf;
+  61   1        //Œ¬øÿ±ªΩ˚÷π£¨¥´»Î∂‡…ŸµÁ¡˜æÕ∑µªÿ∂‡…Ÿ  
+  62   1        if(!IsTempLIMActive)return Input;
+  63   1        //∏Ωº”±»¿˝œÓ
+  64   1        buf=(float)TempProtBuf/(float)ProtFullScale; //ªª≥…±»¿˝œÓ
+  65   1        buf*=100;
+  66   1        buf=PresentLIM(buf);
+  67   1        //∏Ωº”ª˝∑÷œÓ
+  68   1        itgbuf=(float)TempIntegral/(float)IntegrateFullScale; //ªªÀ„ª˝∑÷œÓ
+  69   1        buf+=itgbuf*10;//Ω´ªªÀ„ÕÍ±œµƒª˝∑÷œÓº”»ÎµΩ±»¿˝œÓ÷–£®◊Ó∂‡‘Ï≥…10%µƒπ¶¬ ≤®∂Ø£©
+  70   1        buf=PresentLIM(buf); //œﬁ∑˘
+  71   1        //Ω´ ‰»ÎµÁ¡˜∫Õ¥´»ÎµƒµÁ¡˜÷µΩ¯––º∆À„  
+  72   1        if(Input<=MinumumILED)return MinumumILED; // ‰»Î◊Ó¥ÛµÁ¡˜≤Œ ˝–°”⁄‘ –Ìµƒœ∏∑÷÷µ
+  73   1        ILED=(float)(Input-MinumumILED)/(float)100; //À„≥ˆœ∏∑÷÷µ
+  74   1        ILED*=(100-buf); //À„≥ˆ‘⁄◊ÓµÕµÁ¡˜÷µµΩ¥Ôƒø±ÍµÁ¡˜÷µ÷Æº‰µƒ‘ˆ¡ø¶§
+  75   1        return MinumumILED+(int)ILED; //∑µªÿ µº µƒµÁ¡˜÷µ
+  76   1        }
+  77            
+  78          //Œ¬øÿº∆À„∫Ø ˝
+  79          void ThermalCalcProcess(void)
+  80            {
+  81   1        int Err;
+  82   1        //Œ¬∂»¥´∏–∆˜¥ÌŒÛ
+  83   1        if(!Data.IsNTCOK)
+  84   1          {
+  85   2          ErrCode=Fault_NTCFailed; //ÃÓ–¥¥ÌŒÛ¥˙¬Î
+  86   2          if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //÷∏ æπ ’œ∑¢…˙
+  87   2          return;
+  88   2          }
+  89   1        //µ±Õ≤Õ∑Œ¬∂»π˝∏ﬂ ±£¨πÿ±’º´¡¡µµ  
+  90   1        if(Data.Systemp>(ForceOffTemp-10))IsForceLeaveTurbo=1;  //Œ¬∂»æ‡¿Îπÿª˙±£ª§µƒº‰æ‡≤ªµΩ10∂»£¨¡¢º¥ÕÀ≥ˆº´¡¡
+  91   1        if(Data.Systemp>ForceDisableTurboTemp)IsDisableTurbo=1;
+  92   1        else if(Data.Systemp<(ForceDisableTurboTemp-10))IsDisableTurbo=0;
+  93   1        if(IsForceLeaveTurbo&&!IsDisableTurbo)IsForceLeaveTurbo=0;   //»Áπ˚«ø÷∆ÕÀ≥ˆº´¡¡±Í÷æŒª÷√Œª«“Œ¬∂»“—æ≠ªÿ¬‰µΩº
+             -´¡¡Ω‚À¯µƒ„–÷µµ„£¨‘Ú∏¥Œª
+  94   1        //π˝»»π ’œ
+  95   1        if(Data.Systemp>ForceOffTemp)
+  96   1          {
+  97   2          ErrCode=Fault_OverHeat; //ÃÓ–¥¥ÌŒÛ¥˙¬Î
+  98   2          if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //÷∏ æπ ’œ∑¢…˙
+  99   2          return;
+ 100   2          }
+ 101   1        else if(Data.Systemp<(ForceOffTemp-20)&&ErrCode==Fault_OverHeat)
+ 102   1          {
+ 103   2          ErrCode=Fault_None;
+ 104   2          SwitchToGear(Mode_OFF); //Œ¬∂»ªÿ¬‰£¨œ˚≥˝π ’œ÷∏ æ
+ 105   2          }
+ 106   1        //PIª∑ πƒ‹øÿ÷∆
+ 107   1        if(!CurrentMode->IsNeedStepDown)IsTempLIMActive=0; //µ±«∞µ≤Œª≤ª–Ë“™Ωµµµ
+ 108   1        else if(Data.Systemp>ConstantTemperature)IsTempLIMActive=1;
+ 109   1        else if(Data.Systemp<(ConstantTemperature-10))IsTempLIMActive=0; //÷Õªÿøÿ÷∆
+ 110   1        //PIª∑πÿ±’£¨∏¥Œª ˝÷µ
+ 111   1        if(!IsTempLIMActive)
+ 112   1          {
+ 113   2          TempIntegral=0;
+ 114   2          TempProtBuf=0;
+ 115   2          }
+C51 COMPILER V9.60.0.0   TEMPCONTROL                                                       11/09/2024 20:18:37 PAGE 3   
+
+ 116   1        //Ω¯––PIº∆À„(Ωˆ‘⁄ ‰≥ˆø™∆Ùµƒ ±∫ÚΩ¯––)
+ 117   1        else if(Current>0)
+ 118   1          {
+ 119   2          //«ÛŒÛ≤Ó
+ 120   2          Err=Data.Systemp-ConstantTemperature;
+ 121   2          //±»¿˝œÓ(P)
+ 122   2          TempProtBuf+=(Err>1)?Err*(iabsf(Current/6000)+1):0; //∂ØÃ¨±»¿˝œÓµ˜’˚π¶ƒ‹
+ 123   2          if(TempProtBuf>ProtFullScale)TempProtBuf=ProtFullScale;
+ 124   2          if(TempProtBuf<0)TempProtBuf=0;  //œﬁ÷∆∑˘∂»
+ 125   2          //ª˝∑÷œÓ(I)
+ 126   2          TempIntegral+=Err; //¿€º”ŒÛ≤Ó
+ 127   2          if(TempIntegral>IntegrateFullScale)TempIntegral=IntegrateFullScale;
+ 128   2          if(TempIntegral<-IntegrateFullScale)TempIntegral=-IntegrateFullScale;  //ª˝∑÷œﬁ∑˘
+ 129   2          }
+ 130   1        } 
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    762    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      4      19
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      3    ----
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

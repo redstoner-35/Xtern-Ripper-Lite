@@ -1,0 +1,10 @@
+Added Component: Designator=R6(0402_R)
+Added Component: Designator=R7(0402_R)
+Added Pin To Net: NetName=GND Pin=R6-2
+Added Pin To Net: NetName=VLED+ Pin=R7-1
+Added Pin To Net: NetName=VFB Pin=R6-1
+Added Pin To Net: NetName=VFB Pin=R7-2
+Added Pin To Net: NetName=VFB Pin=U1-17
+Added Net: Name=VFB
+Added Member To Class: ClassName=main Member=Component R6 11K¦¸ (1002) ¡À1%
+Added Member To Class: ClassName=main Member=Component R7 110K¦¸ (1103) ¡À1%

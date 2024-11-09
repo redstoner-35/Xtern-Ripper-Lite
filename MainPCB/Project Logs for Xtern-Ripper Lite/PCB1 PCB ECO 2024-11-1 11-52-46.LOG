@@ -1,0 +1,13 @@
+Added Component: Designator=C20(0402_C)
+Added Component: Designator=U5(QFN40P300X300X800_HS-21N)
+Added Pin To Net: NetName=GND Pin=C20-1
+Added Pin To Net: NetName=5V Pin=C20-2
+Added Pin To Net: NetName=GND Pin=U5-3
+Added Pin To Net: NetName=5V Pin=U5-5
+Added Pin To Net: NetName=GND Pin=U5-21
+Added Pin To Net: NetName=DSCK Pin=U5-4
+Added Net: Name=DSCK
+Added Pin To Net: NetName=DSDA Pin=U5-14
+Added Net: Name=DSDA
+Added Member To Class: ClassName=main Member=Component C20 100nF (104) 10% 16V
+Added Member To Class: ClassName=main Member=Component U5 CM8S6990NA-QFN20

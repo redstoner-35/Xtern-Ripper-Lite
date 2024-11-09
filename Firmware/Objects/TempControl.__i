@@ -1,0 +1,1 @@
+"Logic\TempControl.c" OMF2 OPTIMIZE (9,SPEED) BROWSE INCDIR(.\include;.\StdDriver\inc;.\Hardware) DEBUG PRINT(.\Listings\TempControl.lst) TABS (2) OBJECT(.\Objects\TempControl.obj)

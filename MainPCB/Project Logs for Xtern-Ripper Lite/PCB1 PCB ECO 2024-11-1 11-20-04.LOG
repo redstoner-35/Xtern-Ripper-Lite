@@ -1,0 +1,17 @@
+Added Component: Designator=C15(0402_C)
+Added Component: Designator=U3(SC70-6)
+Added Pin To Net: NetName=GND Pin=C15-1
+Added Pin To Net: NetName=DCDCEN Pin=C15-2
+Added Pin To Net: NetName=VLOW Pin=U3-1
+Added Pin To Net: NetName=GND Pin=U3-2
+Added Pin To Net: NetName=VHIGH Pin=U3-3
+Added Pin To Net: NetName=DCDCEN Pin=U3-5
+Added Pin To Net: NetName=IFB Pin=R14-1
+Added Pin To Net: NetName=IFB Pin=U3-4
+Added Net: Name=IFB
+Added Pin To Net: NetName=VLSG Pin=Q6-4
+Added Pin To Net: NetName=VLSG Pin=R11-1
+Added Pin To Net: NetName=VLSG Pin=U3-6
+Added Net: Name=VLSG
+Added Member To Class: ClassName=main Member=Component C15 100nF (104) 10% 16V
+Added Member To Class: ClassName=main Member=Component U3 NC7SB3157P6X

@@ -1,0 +1,23 @@
+Added Component: Designator=D1(SOD-323)
+Added Component: Designator=R20(0402_R)
+Added Component: Designator=R21(0402_R)
+Added Component: Designator=R22(0402_R)
+Added Component: Designator=R23(0402_R)
+Added Pin To Net: NetName=VBAT Pin=R20-2
+Added Pin To Net: NetName=VLED+ Pin=R21-2
+Added Pin To Net: NetName=BATFB Pin=D1-2
+Added Pin To Net: NetName=BATFB Pin=R20-1
+Added Pin To Net: NetName=BATFB Pin=R22-2
+Added Net: Name=BATFB
+Added Pin To Net: NetName=NetD1_1 Pin=D1-1
+Added Pin To Net: NetName=NetD1_1 Pin=R22-1
+Added Pin To Net: NetName=NetD1_1 Pin=R23-1
+Added Net: Name=NetD1_1
+Added Pin To Net: NetName=OUTFB Pin=R21-1
+Added Pin To Net: NetName=OUTFB Pin=R23-2
+Added Net: Name=OUTFB
+Added Member To Class: ClassName=main Member=Component D1 1N4148WS T4
+Added Member To Class: ClassName=main Member=Component R20 680K (6803) ¡À1%
+Added Member To Class: ClassName=main Member=Component R21 470K¦¸ (4703) ¡À1%
+Added Member To Class: ClassName=main Member=Component R22 100K¦¸ (1003) ¡À1%
+Added Member To Class: ClassName=main Member=Component R23 100K¦¸ (1003) ¡À1%

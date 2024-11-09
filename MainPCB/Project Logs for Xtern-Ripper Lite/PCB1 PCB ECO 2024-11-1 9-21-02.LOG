@@ -1,0 +1,11 @@
+Added Component: Designator=L1(XAL1010-XXXME)
+Added Component: Designator=U1(QFN_ED-T1-GE3_VIS)
+Added Pin To Net: NetName=NetL1_1 Pin=L1-1
+Added Pin To Net: NetName=NetL1_1 Pin=U1-5
+Added Pin To Net: NetName=NetL1_1 Pin=U1-6
+Added Pin To Net: NetName=NetL1_1 Pin=U1-7
+Added Pin To Net: NetName=NetL1_1 Pin=U1-8
+Added Pin To Net: NetName=NetL1_1 Pin=U1-9
+Added Net: Name=NetL1_1
+Added Member To Class: ClassName=main Member=Component L1 XAL1010-221MEB
+Added Member To Class: ClassName=main Member=Component U1 SIC431AED-T1-GE3

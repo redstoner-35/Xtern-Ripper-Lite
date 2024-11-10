@@ -1,6 +1,15 @@
 #ifndef LEDMgmt_
 #define LEDMgmt_
 
+//按键指示灯亮度
+typedef enum
+	{
+  KeyLED_Low,
+	KeyLED_Min,
+	KeyLED_High,
+  KeyLED_Max
+	}KeyLEDBrightnessDef;
+
 typedef enum
 	{
 	LED_OFF, //关闭
@@ -17,10 +26,16 @@ typedef enum
 
 //外部设置index	
 extern volatile LEDStateDef LEDMode;
-
+extern xdata int LEDBrightNess;
+	
+//特殊宏定义	
+#define LEDMgmt_WaitSubmitDuty() PWMLOADEN&0x0C	
+	
 //LED控制函数
 void LED_Init(void);
 void LEDControlHandler(void);	
 void MakeFastStrobe(LEDStateDef LEDMode);	
+void LEDMgmt_SwitchToPWM(void);	
+void LEDMgmt_SetBrightness(void);	
 	
 #endif

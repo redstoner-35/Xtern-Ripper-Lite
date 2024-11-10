@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   MAIN                                                              11/09/2024 20:18:36 PAGE 1   
+C51 COMPILER V9.60.0.0   MAIN                                                              11/10/2024 11:22:39 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE MAIN
@@ -46,51 +46,52 @@ line level    source
   36   1        OutputChannel_Init(); //启动输出通道  
   37   1        OutputChannel_TestRun(); //输出通道试运行
   38   1        DisplayVBattAtStart(); //显示输出电压
-  39   1        WDog_Init(); //启动看门狗
-  40   1        EnableADCAsync(); //启动ADC的异步模式提高处理速度
-  41   1        //主循环  
-  42   1        while(1)
-  43   1          {
-  44   2          //实时处理
-  45   2          SystemTelemHandler();//获取电池信息 
-  46   2          SideKey_LogicHandler(); //处理侧按事务
-  47   2          BatteryTelemHandler(); //处理电池遥测
-  48   2          ModeSwitchFSM(); //挡位状态机
-  49   2          ThermalCalcProcess(); //温控PI环路计算和过热保护
-  50   2          OutputChannel_Calc(); //根据电流进行输出通道控制
-  51   2          PWM_OutputCtrlHandler(); //处理PWM输出事务  
-  52   2          //8Hz定时处理
-  53   2          if(!SysHBFlag)continue; //时间没到，跳过处理
-  54   2          SysHBFlag=0;
-C51 COMPILER V9.60.0.0   MAIN                                                              11/09/2024 20:18:36 PAGE 2   
+  39   1        LEDMgmt_SwitchToPWM(); //数据加载完毕，切换到PWM控制亮度的侧按LED模式
+  40   1        WDog_Init(); //启动看门狗
+  41   1        EnableADCAsync(); //启动ADC的异步模式提高处理速度
+  42   1        //主循环  
+  43   1        while(1)
+  44   1          {
+  45   2          //实时处理
+  46   2          SystemTelemHandler();//获取电池信息 
+  47   2          SideKey_LogicHandler(); //处理侧按事务
+  48   2          BatteryTelemHandler(); //处理电池遥测
+  49   2          ModeSwitchFSM(); //挡位状态机
+  50   2          ThermalCalcProcess(); //温控PI环路计算和过热保护
+  51   2          OutputChannel_Calc(); //根据电流进行输出通道控制
+  52   2          PWM_OutputCtrlHandler(); //处理PWM输出事务  
+  53   2          //8Hz定时处理
+  54   2          if(!SysHBFlag)continue; //时间没到，跳过处理
+C51 COMPILER V9.60.0.0   MAIN                                                              11/10/2024 11:22:39 PAGE 2   
 
-  55   2          WDog_Feed(); //喂狗
-  56   2          BattDisplayTIM(); //电池电量显示TIM
-  57   2          LEDControlHandler(); //侧按指示LED控制函数
-  58   2          ModeFSMTIMHandler();//挡位状态机所需的软件定时器处理
-  59   2          HoldSwitchGearCmdHandler(); //长按换挡
-  60   2          DisplayErrorTIMHandler(); //故障代码显示
-  61   2          MoonConfigHandler(); //月光配置功能
-  62   2          OutputFaultDetect();//输出故障检测
-  63   2          InputFaultDetect(); //输入虚接检测
-  64   2          SleepMgmt(); //休眠管理
-  65   2          }
-  66   1        }
-  67          
-  68          //GPIO2中断回调处理函数
-  69          void Key_IRQHandler(void)  interrupt SideKeyVector 
-  70            {
-  71   1        //侧按中断触发，响应中断
-  72   1        if(GPIO_GetIntFlag(SideKeyGPIOG,SideKeyGPIOx))
-  73   1          {
-  74   2          SideKey_Int_Callback();  //进行按键响应
-  75   2          GPIO_ClearIntFlag(SideKeyGPIOG,SideKeyGPIOx); //清除Flag
-  76   2          }
-  77   1        }
+  55   2          SysHBFlag=0;
+  56   2          WDog_Feed(); //喂狗
+  57   2          BattDisplayTIM(); //电池电量显示TIM
+  58   2          LEDControlHandler(); //侧按指示LED控制函数
+  59   2          ModeFSMTIMHandler();//挡位状态机所需的软件定时器处理
+  60   2          HoldSwitchGearCmdHandler(); //长按换挡
+  61   2          DisplayErrorTIMHandler(); //故障代码显示
+  62   2          MoonConfigHandler(); //月光配置功能
+  63   2          OutputFaultDetect();//输出故障检测
+  64   2          InputFaultDetect(); //输入虚接检测
+  65   2          SleepMgmt(); //休眠管理
+  66   2          }
+  67   1        }
+  68          
+  69          //GPIO2中断回调处理函数
+  70          void Key_IRQHandler(void)  interrupt SideKeyVector 
+  71            {
+  72   1        //侧按中断触发，响应中断
+  73   1        if(GPIO_GetIntFlag(SideKeyGPIOG,SideKeyGPIOx))
+  74   1          {
+  75   2          SideKey_Int_Callback();  //进行按键响应
+  76   2          GPIO_ClearIntFlag(SideKeyGPIOG,SideKeyGPIOx); //清除Flag
+  77   2          }
+  78   1        }
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    183    ----
+   CODE SIZE        =    186    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----

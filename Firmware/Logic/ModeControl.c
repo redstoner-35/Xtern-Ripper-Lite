@@ -5,6 +5,7 @@
 #include "OutputChannel.h"
 #include "RampConfig.h"
 #include "ADCCfg.h"
+#include "cms8s6990.h"
 
 //挡位结构体
 code ModeStrDef ModeSettings[ModeTotalDepth]=
@@ -121,9 +122,9 @@ bit IsRampEnabled; //是否开启无极调光
 bit IsLocked; //锁定指示
 bit IsTacMode; //开启战术模式
 bit IsEnableMoonConfigMode; //打开月光配置模式
+bit IsSideLEDCfgMode; //侧按LED配置模式
 static xdata SOSStateDef SOSState; //全局变量状态位
 xdata FaultCodeDef ErrCode; //错误代码	
-xdata float TargetCurrent; //当前目标电流	
 	
 //软件计时变量
 xdata char BattAlertTimer=0; //电池低电压告警调档
@@ -144,6 +145,8 @@ void ModeFSMInit(void)
 	ErrCode=Fault_None; //没有故障
 	CurrentMode=&ModeSettings[0]; //记忆重置为第一个档
 	IsLocked=0; //关闭锁定
+	IsEnableMoonConfigMode=0;
+	IsSideLEDCfgMode=0; //非配置模式
 	IsTacMode=0; //退出战术模式
 }	
 
@@ -342,6 +345,31 @@ static void SideKey1HRevGearHandler(ModeIdxDef TargetMode)
 	ClickHoldReverseGearTIM&=0x7F; //清除标记位标记本次换挡完成
 	SwitchToGear(TargetMode); //换到目标挡位
 	}	
+//侧按指示灯亮度配置函数
+void SideKeyLEDBriAdjHandler(void)
+	{
+	static xdata bool SideLEDRampDir=false;
+	static xdata char SpeedDIV=8;
+	//当前占空比正在调整
+	if(LEDMgmt_WaitSubmitDuty())return;
+	//减缓速度的分频	
+	SpeedDIV--;	
+	if(SpeedDIV)return;
+	SpeedDIV=8;
+	//从低ramp到高
+	if(!SideLEDRampDir)
+		{
+		if(LEDBrightNess<2399)LEDBrightNess++;
+		else SideLEDRampDir=true; //翻转状态
+		}
+	//从高Ramp到低
+	else
+		{
+		if(LEDBrightNess>50)LEDBrightNess--;
+		else SideLEDRampDir=false;
+		}
+		LEDMgmt_SetBrightness(); //将更改后的亮度保存
+	}				 	
 	
 //无极调光处理
 static void RampAdjHandler(void)
@@ -381,6 +409,7 @@ void ModeSwitchFSM(void)
 	{
 	bit IsHoldEvent;
 	int ClickCount;
+	xdata float TargetCurrent; //当前目标电流	
 	//外部变量声明
 	extern volatile bit StrobeFlag;
 	extern bit IsDisableTurbo;
@@ -454,11 +483,15 @@ void ModeSwitchFSM(void)
 			 BatteryLowAlertProcess(true,Mode_Moon);
 			 if(ClickCount==1)//侧按单击关机
 					{
-					if(IsEnableMoonConfigMode)SaveRampConfig(0); //月光亮度发生调整，保存配置到ROM内
+					if(IsEnableMoonConfigMode||IsSideLEDCfgMode)SaveRampConfig(0); //月光和侧按亮度发生调整，保存配置到ROM内
 			    IsEnableMoonConfigMode=0;
-			    ReturnToOFFState(); //回到关机状态
+			    IsSideLEDCfgMode=0;
+					ReturnToOFFState(); //回到关机状态
 					}
-			 if(IsEnableMoonConfigMode)break; //进入配置模式后阻止响应
+			 if(ClickCount==5&&!IsSideLEDCfgMode)IsSideLEDCfgMode=1;	 //五击调整侧按LED亮度	
+			 //启用侧按LED亮度配置
+       if(IsSideLEDCfgMode)SideKeyLEDBriAdjHandler();
+			 if(IsEnableMoonConfigMode||IsSideLEDCfgMode)break; //进入配置模式后阻止响应
 			 //非配置模式下允许的操作
 			 if(ClickCount==4)IsEnableMoonConfigMode=1; //四击进入配置模式
 		   if(IsHoldEvent&&Battery>2.9)  //电池电压充足，长按进入低亮挡位

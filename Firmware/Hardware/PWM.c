@@ -19,6 +19,8 @@ void PWM_DeInit(void)
 	//关闭PWM模块
 	PWMOE=0x00;
 	PWMCNTE=0x00;
+	PWM23PSC=0x00;
+	PWM01PSC=0x00;  //关闭PWM计数器
 	}
 
 //PWM定时器初始化
@@ -66,9 +68,9 @@ void PWM_ForceSetDuty(bit IsEnable)
 	{
 	PWMD0H=0x01;
 	PWMD0L=IsEnable?0xFF:0;			
-	PWMLOADEN=0x01; //开始加载
-	while(PWMLOADEN!=0); //等待加载结束
-	PWMMASKE=IsEnable?0x00:0x01;  //设置寄存器打开输出
+	PWMLOADEN|=0x01; //开始加载
+	while(PWMLOADEN&0x01); //等待加载结束
+	PWMMASKE=IsNeedToEnableOutput?PWMMASKE&0xFE:PWMMASKE|0x01;  //设置寄存器打开输出
 	}	
 	
 //根据PWM结构体内的配置进行输出
@@ -80,9 +82,9 @@ void PWM_OutputCtrlHandler(void)
 	if(!IsNeedToUploadPWM)return; //不需要加载
 	else if(IsPWMLoading) //当次加载运行中
 		{
-	  if(!PWMLOADEN)//加载寄存器复位为0，表示加载成功
+	  if(!(PWMLOADEN&0x01))//加载寄存器复位为0，表示加载成功
 			 {
-			 PWMMASKE=IsNeedToEnableOutput?0x00:0x01; //更新PWMMASKE寄存器根据输出状态启用对应的通道
+			 PWMMASKE=IsNeedToEnableOutput?PWMMASKE&0xFE:PWMMASKE|0x01; //更新PWMMASKE寄存器根据输出状态启用对应的通道
 			 IsNeedToUploadPWM=0;
 		   IsPWMLoading=0;  //正在加载状态为清除
 			 }
@@ -100,5 +102,5 @@ void PWM_OutputCtrlHandler(void)
 	PWMD0L=value&0xFF;			
 	//PWM寄存器数值已装入，应用数值		
 	IsPWMLoading=1; //标记加载过程进行中
-	PWMLOADEN=0x01; //开始加载
+	PWMLOADEN|=0x01; //开始加载
 	}

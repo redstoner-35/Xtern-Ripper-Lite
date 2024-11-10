@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   PWM                                                               11/09/2024 20:02:42 PAGE 1   
+C51 COMPILER V9.60.0.0   PWM                                                               11/10/2024 10:57:16 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE PWM
@@ -29,105 +29,108 @@ line level    source
   19   1        //¹Ø±ÕPWMÄ£¿é
   20   1        PWMOE=0x00;
   21   1        PWMCNTE=0x00;
-  22   1        }
-  23          
-  24          //PWM¶¨Ê±Æ÷³õÊ¼»¯
-  25          void PWM_Init(void)
-  26            {
-  27   1        GPIOCfgDef PWMInitCfg;
-  28   1        //ÉèÖÃ½á¹¹Ìå
-  29   1        PWMInitCfg.Mode=GPIO_Out_PP;
-  30   1        PWMInitCfg.Slew=GPIO_Slow_Slew;   
-  31   1        PWMInitCfg.DRVCurrent=GPIO_High_Current; //ÍÆPWMDAC£¬²»ÐèÒªºÜ¸ßµÄÉÏÉýÐ±ÂÊ
-  32   1        //ÅäÖÃGPIO
-  33   1        GPIO_WriteBit(PWMDACIOG,PWMDACIOx,0);
-  34   1        GPIO_ConfigGPIOMode(PWMDACIOG,GPIOMask(PWMDACIOx),&PWMInitCfg); 
-  35   1        //ÆôÓÃ¸´ÓÃ¹¦ÄÜ
-  36   1        GPIO_SetMUXMode(PWMDACIOG,PWMDACIOx,GPIO_AF_PWMCH0);
-  37   1        //ÅäÖÃPWM·¢ÉúÆ÷
-  38   1        PWMCON=0x00; //PWMÍ¨µÀÎªÁùÍ¨µÀ¶ÀÁ¢Ä£Ê½£¬ÏòÏÂ¼ÆÊý£¬¹Ø±Õ·Ç¶Ô³Æ¼ÆÊý¹¦ÄÜ  
-  39   1        PWMOE=0x01; //´ò¿ªPWMÊä³öÍ¨µÀ0
-  40   1        PWM01PSC=0x01;  //´ò¿ªÔ¤·ÖÆµÆ÷ºÍ¼ÆÊýÆ÷Ê±ÖÓ 
-  41   1        PWM0DIV=0xff;   //ÁîFpwmcnt=Fsys=48MHz(²»·ÖÆµ)
-  42   1        PWMPINV=0x00; //ËùÓÐÍ¨µÀ¾ùÉèÖÃÎªÕý³£Êä³öÄ£Ê½
-  43   1        PWMCNTM=0x01; //Í¨µÀ0ÅäÖÃÎª×Ô¶¯¼ÓÔØÄ£Ê½
-  44   1        PWMCNTCLR=0x01; //³õÊ¼»¯PWMµÄÊ±ºò¸´Î»¶¨Ê±Æ÷
-  45   1        PWMDTE=0x00; //¹Ø±ÕËÀÇøÊ±¼ä
-  46   1        PWMMASKD=0x00; 
-  47   1        PWMMASKE=0x01; //PWMÑÚÂë¹¦ÄÜÆôÓÃ£¬Ä¬ÈÏ×´Ì¬ÏÂ½ûÖ¹Í¨µÀ0Êä³ö
-  48   1        //ÅäÖÃÖÜÆÚÊý¾Ý
-  49   1        PWMP0H=(PWMStepConstant>>8)&0xFF;
-  50   1        PWMP0L=PWMStepConstant&0xFF;  
-  51   1        //ÅäÖÃÕ¼¿Õ±ÈÊý¾Ý
-  52   1        PWMD0H=0;
-  53   1        PWMD0L=0; 
-  54   1        //³õÊ¼»¯±äÁ¿
-C51 COMPILER V9.60.0.0   PWM                                                               11/09/2024 20:02:42 PAGE 2   
+  22   1        PWM23PSC=0x00;
+  23   1        PWM01PSC=0x00;  //¹Ø±ÕPWM¼ÆÊýÆ÷
+  24   1        }
+  25          
+  26          //PWM¶¨Ê±Æ÷³õÊ¼»¯
+  27          void PWM_Init(void)
+  28            {
+  29   1        GPIOCfgDef PWMInitCfg;
+  30   1        //ÉèÖÃ½á¹¹Ìå
+  31   1        PWMInitCfg.Mode=GPIO_Out_PP;
+  32   1        PWMInitCfg.Slew=GPIO_Slow_Slew;   
+  33   1        PWMInitCfg.DRVCurrent=GPIO_High_Current; //ÍÆPWMDAC£¬²»ÐèÒªºÜ¸ßµÄÉÏÉýÐ±ÂÊ
+  34   1        //ÅäÖÃGPIO
+  35   1        GPIO_WriteBit(PWMDACIOG,PWMDACIOx,0);
+  36   1        GPIO_ConfigGPIOMode(PWMDACIOG,GPIOMask(PWMDACIOx),&PWMInitCfg); 
+  37   1        //ÆôÓÃ¸´ÓÃ¹¦ÄÜ
+  38   1        GPIO_SetMUXMode(PWMDACIOG,PWMDACIOx,GPIO_AF_PWMCH0);
+  39   1        //ÅäÖÃPWM·¢ÉúÆ÷
+  40   1        PWMCON=0x00; //PWMÍ¨µÀÎªÁùÍ¨µÀ¶ÀÁ¢Ä£Ê½£¬ÏòÏÂ¼ÆÊý£¬¹Ø±Õ·Ç¶Ô³Æ¼ÆÊý¹¦ÄÜ  
+  41   1        PWMOE=0x01; //´ò¿ªPWMÊä³öÍ¨µÀ0
+  42   1        PWM01PSC=0x01;  //´ò¿ªÔ¤·ÖÆµÆ÷ºÍ¼ÆÊýÆ÷Ê±ÖÓ 
+  43   1        PWM0DIV=0xff;   //ÁîFpwmcnt=Fsys=48MHz(²»·ÖÆµ)
+  44   1        PWMPINV=0x00; //ËùÓÐÍ¨µÀ¾ùÉèÖÃÎªÕý³£Êä³öÄ£Ê½
+  45   1        PWMCNTM=0x01; //Í¨µÀ0ÅäÖÃÎª×Ô¶¯¼ÓÔØÄ£Ê½
+  46   1        PWMCNTCLR=0x01; //³õÊ¼»¯PWMµÄÊ±ºò¸´Î»¶¨Ê±Æ÷
+  47   1        PWMDTE=0x00; //¹Ø±ÕËÀÇøÊ±¼ä
+  48   1        PWMMASKD=0x00; 
+  49   1        PWMMASKE=0x01; //PWMÑÚÂë¹¦ÄÜÆôÓÃ£¬Ä¬ÈÏ×´Ì¬ÏÂ½ûÖ¹Í¨µÀ0Êä³ö
+  50   1        //ÅäÖÃÖÜÆÚÊý¾Ý
+  51   1        PWMP0H=(PWMStepConstant>>8)&0xFF;
+  52   1        PWMP0L=PWMStepConstant&0xFF;  
+  53   1        //ÅäÖÃÕ¼¿Õ±ÈÊý¾Ý
+  54   1        PWMD0H=0;
+C51 COMPILER V9.60.0.0   PWM                                                               11/10/2024 10:57:16 PAGE 2   
 
-  55   1        PWMDuty=0;
-  56   1        IsPWMLoading=0; 
-  57   1        IsNeedToUploadPWM=0;
-  58   1        //ÆôÓÃPWM
-  59   1        PWMCNTE=0x01; //Ê¹ÄÜÍ¨µÀ0µÄ¼ÆÊýÆ÷£¬PWM¿ªÊ¼ÔËÐÐ
-  60   1        PWMLOADEN=0x01; //¼ÓÔØÍ¨µÀ0µÄPWMÖµ
-  61   1        while(PWMLOADEN!=0); //µÈ´ý¼ÓÔØ½áÊø
-  62   1        }
-  63          
-  64          //PWMÇ¿ÖÆÉèÖÃÕ¼¿Õ±È
-  65          void PWM_ForceSetDuty(bit IsEnable)
-  66            {
-  67   1        PWMD0H=0x01;
-  68   1        PWMD0L=IsEnable?0xFF:0;     
-  69   1        PWMLOADEN=0x01; //¿ªÊ¼¼ÓÔØ
-  70   1        while(PWMLOADEN!=0); //µÈ´ý¼ÓÔØ½áÊø
-  71   1        PWMMASKE=IsEnable?0x00:0x01;  //ÉèÖÃ¼Ä´æÆ÷´ò¿ªÊä³ö
-  72   1        } 
-  73            
-  74          //¸ù¾ÝPWM½á¹¹ÌåÄÚµÄÅäÖÃ½øÐÐÊä³ö
-  75          void PWM_OutputCtrlHandler(void)  
-  76            {
-  77   1        int value;
-  78   1        float buf;
-  79   1        //ÅÐ¶ÏÊÇ·ñÐèÒª¼ÓÔØµÄÂß¼­ÔËËã
-  80   1        if(!IsNeedToUploadPWM)return; //²»ÐèÒª¼ÓÔØ
-  81   1        else if(IsPWMLoading) //µ±´Î¼ÓÔØÔËÐÐÖÐ
-  82   1          {
-  83   2          if(!PWMLOADEN)//¼ÓÔØ¼Ä´æÆ÷¸´Î»Îª0£¬±íÊ¾¼ÓÔØ³É¹¦
-  84   2             {
-  85   3             PWMMASKE=IsNeedToEnableOutput?0x00:0x01; //¸üÐÂPWMMASKE¼Ä´æÆ÷¸ù¾ÝÊä³ö×´Ì¬ÆôÓÃ¶ÔÓ¦µÄÍ¨µÀ
-  86   3             IsNeedToUploadPWM=0;
-  87   3             IsPWMLoading=0;  //ÕýÔÚ¼ÓÔØ×´Ì¬ÎªÇå³ý
-  88   3             }
-  89   2          return;
-  90   2          }
-  91   1        //PWMÕ¼¿Õ±ÈÏÞÖÆ
-  92   1        if(PWMDuty>100)PWMDuty=100;
-  93   1        if(PWMDuty<0)PWMDuty=0;
-  94   1        //ÅäÖÃ×°ÔØÊýÖµ
-  95   1        IsNeedToEnableOutput=buf?1:0; //ÊÇ·ñÐèÒªÆôÓÃÊä³ö
-  96   1        buf=PWMDuty*(float)PWMStepConstant;
-  97   1        buf/=(float)100;
-  98   1        value=(int)buf;
-  99   1        PWMD0H=(value>>8)&0xFF;
- 100   1        PWMD0L=value&0xFF;      
- 101   1        //PWM¼Ä´æÆ÷ÊýÖµÒÑ×°Èë£¬Ó¦ÓÃÊýÖµ   
- 102   1        IsPWMLoading=1; //±ê¼Ç¼ÓÔØ¹ý³Ì½øÐÐÖÐ
- 103   1        PWMLOADEN=0x01; //¿ªÊ¼¼ÓÔØ
- 104   1        }
+  55   1        PWMD0L=0; 
+  56   1        //³õÊ¼»¯±äÁ¿
+  57   1        PWMDuty=0;
+  58   1        IsPWMLoading=0; 
+  59   1        IsNeedToUploadPWM=0;
+  60   1        //ÆôÓÃPWM
+  61   1        PWMCNTE=0x01; //Ê¹ÄÜÍ¨µÀ0µÄ¼ÆÊýÆ÷£¬PWM¿ªÊ¼ÔËÐÐ
+  62   1        PWMLOADEN=0x01; //¼ÓÔØÍ¨µÀ0µÄPWMÖµ
+  63   1        while(PWMLOADEN!=0); //µÈ´ý¼ÓÔØ½áÊø
+  64   1        }
+  65          
+  66          //PWMÇ¿ÖÆÉèÖÃÕ¼¿Õ±È
+  67          void PWM_ForceSetDuty(bit IsEnable)
+  68            {
+  69   1        PWMD0H=0x01;
+  70   1        PWMD0L=IsEnable?0xFF:0;     
+  71   1        PWMLOADEN|=0x01; //¿ªÊ¼¼ÓÔØ
+  72   1        while(PWMLOADEN&0x01); //µÈ´ý¼ÓÔØ½áÊø
+  73   1        PWMMASKE=IsNeedToEnableOutput?PWMMASKE&0xFE:PWMMASKE|0x01;  //ÉèÖÃ¼Ä´æÆ÷´ò¿ªÊä³ö
+  74   1        } 
+  75            
+  76          //¸ù¾ÝPWM½á¹¹ÌåÄÚµÄÅäÖÃ½øÐÐÊä³ö
+  77          void PWM_OutputCtrlHandler(void)  
+  78            {
+  79   1        int value;
+  80   1        float buf;
+  81   1        //ÅÐ¶ÏÊÇ·ñÐèÒª¼ÓÔØµÄÂß¼­ÔËËã
+  82   1        if(!IsNeedToUploadPWM)return; //²»ÐèÒª¼ÓÔØ
+  83   1        else if(IsPWMLoading) //µ±´Î¼ÓÔØÔËÐÐÖÐ
+  84   1          {
+  85   2          if(!(PWMLOADEN&0x01))//¼ÓÔØ¼Ä´æÆ÷¸´Î»Îª0£¬±íÊ¾¼ÓÔØ³É¹¦
+  86   2             {
+  87   3             PWMMASKE=IsNeedToEnableOutput?PWMMASKE&0xFE:PWMMASKE|0x01; //¸üÐÂPWMMASKE¼Ä´æÆ÷¸ù¾ÝÊä³ö×´Ì¬ÆôÓÃ¶ÔÓ¦µÄÍ
+             -¨µÀ
+  88   3             IsNeedToUploadPWM=0;
+  89   3             IsPWMLoading=0;  //ÕýÔÚ¼ÓÔØ×´Ì¬ÎªÇå³ý
+  90   3             }
+  91   2          return;
+  92   2          }
+  93   1        //PWMÕ¼¿Õ±ÈÏÞÖÆ
+  94   1        if(PWMDuty>100)PWMDuty=100;
+  95   1        if(PWMDuty<0)PWMDuty=0;
+  96   1        //ÅäÖÃ×°ÔØÊýÖµ
+  97   1        IsNeedToEnableOutput=buf?1:0; //ÊÇ·ñÐèÒªÆôÓÃÊä³ö
+  98   1        buf=PWMDuty*(float)PWMStepConstant;
+  99   1        buf/=(float)100;
+ 100   1        value=(int)buf;
+ 101   1        PWMD0H=(value>>8)&0xFF;
+ 102   1        PWMD0L=value&0xFF;      
+ 103   1        //PWM¼Ä´æÆ÷ÊýÖµÒÑ×°Èë£¬Ó¦ÓÃÊýÖµ   
+ 104   1        IsPWMLoading=1; //±ê¼Ç¼ÓÔØ¹ý³Ì½øÐÐÖÐ
+ 105   1        PWMLOADEN|=0x01; //¿ªÊ¼¼ÓÔØ
+ 106   1        }
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    399    ----
+   CODE SIZE        =    429    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =      4    ----
    PDATA SIZE       =   ----    ----
    DATA SIZE        =   ----       7
    IDATA SIZE       =   ----    ----
+C51 COMPILER V9.60.0.0   PWM                                                               11/10/2024 10:57:16 PAGE 3   
+
    BIT SIZE         =      3       1
    EDATA SIZE       =   ----    ----
    HDATA SIZE       =   ----    ----
-C51 COMPILER V9.60.0.0   PWM                                                               11/09/2024 20:02:42 PAGE 3   
-
    XDATA CONST SIZE =   ----    ----
    FAR CONST SIZE   =   ----    ----
 END OF MODULE INFORMATION.

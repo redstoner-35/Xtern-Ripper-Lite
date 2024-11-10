@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   LEDMGMT                                                           11/09/2024 20:02:42 PAGE 1   
+C51 COMPILER V9.60.0.0   LEDMGMT                                                           11/10/2024 11:12:35 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE LEDMGMT
@@ -17,133 +17,208 @@ line level    source
    7          volatile LEDStateDef LEDMode; 
    8          static char timer=0;
    9          static xdata char StepDownTIM; 
-  10          
-  11          sbit RLED=RedLEDIOP^RedLEDIOx;
-  12          sbit GLED=GreenLEDIOP^GreenLEDIOx;
-  13          
-  14          //LED配置函数
-  15          void LED_Init(void)
-  16            {
-  17   1        GPIOCfgDef LEDInitCfg;
-  18   1        //设置结构体
-  19   1        LEDInitCfg.Mode=GPIO_Out_PP;
-  20   1        LEDInitCfg.Slew=GPIO_Slow_Slew;   
-  21   1        LEDInitCfg.DRVCurrent=GPIO_High_Current; //配置为低斜率大电流的推挽输出
-  22   1        //初始化寄存器
-  23   1        RLED=0;
-  24   1        GLED=0;
-  25   1        //配置GPIO
-  26   1        GPIO_ConfigGPIOMode(RedLEDIOG,GPIOMask(RedLEDIOx),&LEDInitCfg); //红色LED(推挽输出)
-  27   1        GPIO_ConfigGPIOMode(GreenLEDIOG,GPIOMask(GreenLEDIOx),&LEDInitCfg); //绿色LED(推挽输出)
-  28   1        //初始化模式设置
-  29   1        LEDMode=LED_OFF;
-  30   1        }
-  31          
-  32          //调试模式，是否使能降档提示
-  33          #define EnableStepDownInfo  
-  34            
-  35          //LED控制函数
-  36          void LEDControlHandler(void)
-  37            {
-  38   1        char buf;
-  39   1        bit IsLEDON;
-  40   1        #ifdef EnableStepDownInfo
-  41   1        extern bit IsTempLIMActive;
-  42   1        //降档之后每隔一段时间闪一下侧按 
-  43   1        if(!IsTempLIMActive)StepDownTIM=0;
-  44   1        else if(StepDownTIM>8)
-  45   1           {
-  46   2           RLED=0;
-  47   2           GLED=0;
-  48   2           timer=0;  
-  49   2           StepDownTIM=0;
-  50   2           return;
-  51   2           }  
-  52   1        else StepDownTIM++;
-  53   1        #endif
-  54   1        //据目标模式设置LED状态
-C51 COMPILER V9.60.0.0   LEDMGMT                                                           11/09/2024 20:02:42 PAGE 2   
+  10          xdata int LEDBrightNess; //LED亮度占空比数据
+  11          
+  12          sbit RedLED=RedLEDIOP^RedLEDIOx;
+  13          sbit GreenLED=GreenLEDIOP^GreenLEDIOx;
+  14          
+  15          //LED配置函数
+  16          void LED_Init(void)
+  17            {
+  18   1        GPIOCfgDef LEDInitCfg;
+  19   1        //设置结构体
+  20   1        LEDInitCfg.Mode=GPIO_Out_PP;
+  21   1        LEDInitCfg.Slew=GPIO_Slow_Slew;   
+  22   1        LEDInitCfg.DRVCurrent=GPIO_High_Current; //配置为低斜率大电流的推挽输出
+  23   1        //初始化寄存器
+  24   1        RedLED=0;
+  25   1        GreenLED=0;
+  26   1        //配置GPIO
+  27   1        GPIO_ConfigGPIOMode(RedLEDIOG,GPIOMask(RedLEDIOx),&LEDInitCfg); //红色LED(推挽输出)
+  28   1        GPIO_ConfigGPIOMode(GreenLEDIOG,GPIOMask(GreenLEDIOx),&LEDInitCfg); //绿色LED(推挽输出)
+  29   1        //初始化模式设置
+  30   1        LEDMode=LED_OFF;
+  31   1        }
+  32          
+  33          //LED管理器切换到PWM模式
+  34          void LEDMgmt_SwitchToPWM(void)
+  35            {
+  36   1        //启用复用功能
+  37   1        GPIO_SetMUXMode(RedLEDIOG,RedLEDIOx,GPIO_AF_PWMCH2);
+  38   1        GPIO_SetMUXMode(GreenLEDIOG,GreenLEDIOx,GPIO_AF_PWMCH3);
+  39   1        //配置PWM发生器
+  40   1        PWMOE|=0x0C; //打开PWM输出通道2 3
+  41   1        PWM23PSC=0x01;  //打开预分频器和计数器时钟 
+  42   1        PWM2DIV=0xff;   
+  43   1        PWM3DIV=0xff;   //令Fpwmcnt=Fsys=48MHz(不分频)  
+  44   1        PWMCNTM|=0x0C; //通道2 3配置为自动加载模式
+  45   1        PWMCNTCLR=0x0C; //初始化PWM的时候复位通道2和3定时器
+  46   1        PWMMASKE|=0x0C; //PWM掩码功能启用禁止通道2 3输出
+  47   1        //配置周期数据
+  48   1        PWMP2H=0x09;
+  49   1        PWMP2L=0x5F; 
+  50   1        PWMP3H=0x09;
+  51   1        PWMP3L=0x5F; //CNT=(48MHz/20Khz)-1=2399
+  52   1        //配置占空比数据
+  53   1        if(LEDBrightNess>2399)LEDBrightNess=2399;
+  54   1        if(LEDBrightNess<50)LEDBrightNess=50; //限制传入的占空比数据范围
+C51 COMPILER V9.60.0.0   LEDMGMT                                                           11/10/2024 11:12:35 PAGE 2   
 
-  55   1        switch(LEDMode)
-  56   1          {
-  57   2          case LED_OFF:RLED=0;GLED=0;timer=0;break; //LED关闭
-  58   2          case LED_Green:RLED=0;GLED=1;break;//绿色LED
-  59   2          case LED_Red:RLED=1;GLED=0;break;//红色LED
-  60   2          case LED_Amber:RLED=1;GLED=1;break;//黄色LED
-  61   2          case LED_RedBlink_Fast: //红色快闪  
-  62   2          case LED_RedBlink: //红色闪烁
-  63   2            GLED=0;
-  64   2            buf=timer&0x7F; //读取当前定时器的控制位
-  65   2            if(buf<(LEDMode==LED_RedBlink?3:0))
-  66   2              {
-  67   3              buf++;
-  68   3              timer&=0x80;
-  69   3              timer|=buf; //时间没到，继续计时
-  70   3              }
-  71   2            else timer=timer&0x80?0x00:0x80; //翻转bit 7并重置定时器
-  72   2            RLED=timer&0x80?1:0; //根据bit 7载入LED控制位
-  73   2            break;
-  74   2          case LED_RedBlinkThird: //LED红色闪烁3次
-  75   2          case LED_RedBlinkFifth: //LED红色闪烁5次
-  76   2            GLED=0; //绿色LED持续关闭
-  77   2            timer&=0x7F; //去掉最上面的位
-  78   2            if(timer>(LEDMode==LED_RedBlinkThird?6:10))
-  79   2              {
-  80   3              RLED=0;
-  81   3              LEDMode=LED_OFF; //时间到，关闭识别
-  82   3              }
-  83   2            else //继续计时
-  84   2              {
-  85   3              IsLEDON=(timer%2)?1:0; //通过余2判断实现检测
-  86   3              RLED=IsLEDON;
-  87   3              timer++;
-  88   3              }   
-  89   2            break;
-  90   2          case LED_GreenBlinkThird: //LED绿色闪烁3次
-  91   2            RLED=0; //红色LED持续关闭
-  92   2            timer&=0x7F; //去掉最上面的位
-  93   2            if(timer>6)
-  94   2              {
-  95   3              GLED=0;
-  96   3              LEDMode=LED_OFF; //时间到，关闭识别
-  97   3              }
-  98   2            else //继续计时
-  99   2              {
- 100   3              IsLEDON=(timer%2)?1:0; //通过余2判断实现检测
- 101   3              GLED=IsLEDON;
- 102   3              timer++;
- 103   3              }   
- 104   2            break;
- 105   2          }
- 106   1        }
- 107            
- 108          //制造一次快闪
- 109          void MakeFastStrobe(LEDStateDef LEDMode)
- 110            {
- 111   1        //打开LED
- 112   1        switch(LEDMode)
- 113   1          {
- 114   2          case LED_Green:RLED=0;GLED=1;break;//绿色LED
- 115   2          case LED_Red:RLED=1;GLED=0;break;//红色LED
- 116   2          case LED_Amber:RLED=1;GLED=1;break;//黄色LED
-C51 COMPILER V9.60.0.0   LEDMGMT                                                           11/09/2024 20:02:42 PAGE 3   
+  55   1        PWMD2H=(LEDBrightNess>>8)&0xFF;
+  56   1        PWMD2L=LEDBrightNess&0xFF; 
+  57   1        PWMD3H=(LEDBrightNess>>8)&0xFF;
+  58   1        PWMD3L=LEDBrightNess&0xFF; 
+  59   1        //启用PWM
+  60   1        PWMCNTE|=0x0C; //使能通道0的计数器，PWM开始运作
+  61   1        PWMLOADEN|=0x0C; //加载通道0的PWM值
+  62   1        while(LEDMgmt_WaitSubmitDuty()); //等待加载结束
+  63   1        } 
+  64          
+  65          //调试模式，是否使能降档提示
+  66          #define EnableStepDownInfo  
+  67            
+  68          //设置LED开关 
+  69          static void SetLEDONOFF(bit RLED,bit GLED)
+  70            {
+  71   1        unsigned char buf;
+  72   1        //非PWM模式直接设置对应SFR
+  73   1        if(!(PWMCNTE&0x0C))
+  74   1          {
+  75   2          RedLED=RLED;
+  76   2          GreenLED=GLED;
+  77   2          }
+  78   1        //PWM模式设置输出mask寄存器
+  79   1        else
+  80   1          {
+  81   2          buf=PWMMASKE;
+  82   2          if(RLED)buf&=0xFB;
+  83   2          else buf|=0x04; //控制PWM通道2是否正常输出来打开关闭红色LED
+  84   2          if(GLED)buf&=0xF7;
+  85   2          else buf|=0x08; //控制PWM通道3是否正常输出来打开关闭绿色LED
+  86   2          PWMMASKE=buf;
+  87   2          }
+  88   1        } 
+  89            
+  90          //LED管理器实时设置亮度  
+  91          void LEDMgmt_SetBrightness(void)
+  92            {
+  93   1        //亮度限幅
+  94   1        if(LEDBrightNess>2399)LEDBrightNess=2399;
+  95   1        if(LEDBrightNess<50)LEDBrightNess=50;
+  96   1        //设置寄存器
+  97   1        PWMD2H=(LEDBrightNess>>8)&0xFF;
+  98   1        PWMD2L=LEDBrightNess&0xFF; 
+  99   1        PWMD3H=(LEDBrightNess>>8)&0xFF;
+ 100   1        PWMD3L=LEDBrightNess&0xFF; 
+ 101   1        //编程参数值
+ 102   1        PWMLOADEN|=0x0C; //加载对应通道的PWM值
+ 103   1        }
+ 104            
+ 105          //LED控制函数
+ 106          void LEDControlHandler(void)
+ 107            {
+ 108   1        char buf;
+ 109   1        bit IsLEDON,RLED,GLED;
+ 110   1        #ifdef EnableStepDownInfo
+ 111   1        extern bit IsTempLIMActive;
+ 112   1        //降档之后每隔一段时间闪一下侧按 
+ 113   1        if(!IsTempLIMActive)StepDownTIM=0;
+ 114   1        else if(StepDownTIM>8)
+ 115   1           {
+ 116   2           RLED=0;
+C51 COMPILER V9.60.0.0   LEDMGMT                                                           11/10/2024 11:12:35 PAGE 3   
 
- 117   2          }
- 118   1        delay_ms(20);
- 119   1        //关闭LED
- 120   1        RLED=0;
- 121   1        GLED=0;
- 122   1        } 
+ 117   2           GLED=0;
+ 118   2           timer=0;  
+ 119   2           StepDownTIM=0;
+ 120   2           return;
+ 121   2           }  
+ 122   1        else StepDownTIM++;
+ 123   1        #endif
+ 124   1        //据目标模式设置LED状态
+ 125   1        switch(LEDMode)
+ 126   1          {
+ 127   2          case LED_OFF:RLED=0;GLED=0;timer=0;break; //LED关闭
+ 128   2          case LED_Green:RLED=0;GLED=1;break;//绿色LED
+ 129   2          case LED_Red:RLED=1;GLED=0;break;//红色LED
+ 130   2          case LED_Amber:RLED=1;GLED=1;break;//黄色LED
+ 131   2          case LED_RedBlink_Fast: //红色快闪  
+ 132   2          case LED_RedBlink: //红色闪烁
+ 133   2            GLED=0;
+ 134   2            buf=timer&0x7F; //读取当前定时器的控制位
+ 135   2            if(buf<(LEDMode==LED_RedBlink?3:0))
+ 136   2              {
+ 137   3              buf++;
+ 138   3              timer&=0x80;
+ 139   3              timer|=buf; //时间没到，继续计时
+ 140   3              }
+ 141   2            else timer=timer&0x80?0x00:0x80; //翻转bit 7并重置定时器
+ 142   2            RLED=timer&0x80?1:0; //根据bit 7载入LED控制位
+ 143   2            break;
+ 144   2          case LED_RedBlinkThird: //LED红色闪烁3次
+ 145   2          case LED_RedBlinkFifth: //LED红色闪烁5次
+ 146   2            GLED=0; //绿色LED持续关闭
+ 147   2            timer&=0x7F; //去掉最上面的位
+ 148   2            if(timer>(LEDMode==LED_RedBlinkThird?6:10))
+ 149   2              {
+ 150   3              RLED=0;
+ 151   3              LEDMode=LED_OFF; //时间到，关闭识别
+ 152   3              }
+ 153   2            else //继续计时
+ 154   2              {
+ 155   3              IsLEDON=(timer%2)?1:0; //通过余2判断实现检测
+ 156   3              RLED=IsLEDON;
+ 157   3              timer++;
+ 158   3              }   
+ 159   2            break;
+ 160   2          case LED_GreenBlinkThird: //LED绿色闪烁3次
+ 161   2            RLED=0; //红色LED持续关闭
+ 162   2            timer&=0x7F; //去掉最上面的位
+ 163   2            if(timer>6)
+ 164   2              {
+ 165   3              GLED=0;
+ 166   3              LEDMode=LED_OFF; //时间到，关闭识别
+ 167   3              }
+ 168   2            else //继续计时
+ 169   2              {
+ 170   3              IsLEDON=(timer%2)?1:0; //通过余2判断实现检测
+ 171   3              GLED=IsLEDON;
+ 172   3              timer++;
+ 173   3              }   
+ 174   2            break;
+ 175   2          }
+ 176   1        //LED运算完毕，提交到寄存器控制亮灭
+ 177   1        SetLEDONOFF(RLED,GLED);
+ 178   1        }
+C51 COMPILER V9.60.0.0   LEDMGMT                                                           11/10/2024 11:12:35 PAGE 4   
+
+ 179            
+ 180          //制造一次快闪
+ 181          void MakeFastStrobe(LEDStateDef LEDMode)
+ 182            {
+ 183   1        bit RLED=0,GLED=0;
+ 184   1        //打开LED
+ 185   1        switch(LEDMode)
+ 186   1          {
+ 187   2          case LED_Green:RLED=0;GLED=1;break;//绿色LED
+ 188   2          case LED_Red:RLED=1;GLED=0;break;//红色LED
+ 189   2          case LED_Amber:RLED=1;GLED=1;break;//黄色LED
+ 190   2          }
+ 191   1        SetLEDONOFF(RLED,GLED);
+ 192   1        delay_ms(20);
+ 193   1        //关闭LED
+ 194   1        SetLEDONOFF(0,0);
+ 195   1        } 
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    369    ----
+   CODE SIZE        =    691    ----
    CONSTANT SIZE    =   ----    ----
-   XDATA SIZE       =      1    ----
+   XDATA SIZE       =      3    ----
    PDATA SIZE       =   ----    ----
    DATA SIZE        =      2       3
    IDATA SIZE       =   ----    ----
-   BIT SIZE         =   ----       1
+   BIT SIZE         =   ----       7
    EDATA SIZE       =   ----    ----
    HDATA SIZE       =   ----    ----
    XDATA CONST SIZE =   ----    ----

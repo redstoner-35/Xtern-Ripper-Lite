@@ -36,6 +36,7 @@ void main()
 	OutputChannel_Init(); //启动输出通道	
 	OutputChannel_TestRun(); //输出通道试运行
 	DisplayVBattAtStart(); //显示输出电压
+	LEDMgmt_SwitchToPWM(); //数据加载完毕，切换到PWM控制亮度的侧按LED模式
 	WDog_Init(); //启动看门狗
 	EnableADCAsync(); //启动ADC的异步模式提高处理速度
 	//主循环	

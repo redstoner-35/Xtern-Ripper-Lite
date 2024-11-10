@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   RAMPCONFIG                                                        11/09/2024 20:04:55 PAGE 1   
+C51 COMPILER V9.60.0.0   RAMPCONFIG                                                        11/10/2024 11:12:36 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE RAMPCONFIG
@@ -12,186 +12,190 @@ line level    source
    2          #include "cms8s6990.h"
    3          #include "stdbool.h"
    4          #include "RampConfig.h"
-   5          
-   6          //隐藏在ROM里面的彩蛋
-   7          code char VendorString[]="Xtern Ripper Lite V1.0 By:Redstoner_35\x0D\x0A";
-   8          
-   9          //CRC-8计算 
-  10          static u8 PEC8Check(char *DIN,long Len)
-  11          {
-  12   1       unsigned char crcbuf=0x00;
-  13   1       long i,ptr=0;
-  14   1       while(Len>0)
-  15   1       {
-  16   2        //载入数据
-  17   2        crcbuf=crcbuf^DIN[ptr];
-  18   2        //计算
-  19   2        for(i=8;i>0;i--)
-  20   2         {
-  21   3         if(crcbuf&0x80)crcbuf=(crcbuf<<1)^0x07;//最高位为1，左移之后和多项式XOR
-  22   3         else crcbuf=crcbuf<<1;//最高位为0，只移位不XOR
-  23   3         }
-  24   2        //计算完一轮，指向下一个数据
-  25   2        ptr++;
-  26   2        Len--;
-  27   2       }
-  28   1       //和内存里面的Vendor String进行XOR
-  29   1       for(i=0;i<sizeof(VendorString);i++)crcbuf^=VendorString[i];
-  30   1       //输出结果
-  31   1       return crcbuf;
-  32   1      }
-  33          
-  34          //读取无极调光配置
-  35          void ReadRampConfig(void)
-  36            {
-  37   1        int i;
-  38   1        extern code ModeStrDef ModeSettings[ModeTotalDepth];
-  39   1        RampROMImg ROMData;
-  40   1        //禁止中断并解锁flash
-  41   1        EA=0;
-  42   1        _nop_();
-  43   1        MLOCK = 0xAA;
-  44   1        //开始读取
-  45   1        for(i=0;i<sizeof(RampROMImageDef);i++)
-  46   1          {
-  47   2          MADRL = i;
-  48   2          MADRH = i>>8; //设置地址
-  49   2          _nop_();  
-  50   2          MCTRL = 0x11; //对数据区进行读取操作
-  51   2          _nop_();
+   5          #include "LEDMgmt.h"
+   6          
+   7          //隐藏在ROM里面的彩蛋
+   8          code char VendorString[]="Xtern Ripper Lite V1.0 By:Redstoner_35\x0D\x0A";
+   9          
+  10          //CRC-8计算 
+  11          static u8 PEC8Check(char *DIN,long Len)
+  12          {
+  13   1       unsigned char crcbuf=0x00;
+  14   1       long i,ptr=0;
+  15   1       while(Len>0)
+  16   1       {
+  17   2        //载入数据
+  18   2        crcbuf=crcbuf^DIN[ptr];
+  19   2        //计算
+  20   2        for(i=8;i>0;i--)
+  21   2         {
+  22   3         if(crcbuf&0x80)crcbuf=(crcbuf<<1)^0x07;//最高位为1，左移之后和多项式XOR
+  23   3         else crcbuf=crcbuf<<1;//最高位为0，只移位不XOR
+  24   3         }
+  25   2        //计算完一轮，指向下一个数据
+  26   2        ptr++;
+  27   2        Len--;
+  28   2       }
+  29   1       //和内存里面的Vendor String进行XOR
+  30   1       for(i=0;i<sizeof(VendorString);i++)crcbuf^=VendorString[i];
+  31   1       //输出结果
+  32   1       return crcbuf;
+  33   1      }
+  34          
+  35          //读取无极调光配置
+  36          void ReadRampConfig(void)
+  37            {
+  38   1        int i;
+  39   1        extern code ModeStrDef ModeSettings[ModeTotalDepth];
+  40   1        RampROMImg ROMData;
+  41   1        //禁止中断并解锁flash
+  42   1        EA=0;
+  43   1        _nop_();
+  44   1        MLOCK = 0xAA;
+  45   1        //开始读取
+  46   1        for(i=0;i<sizeof(RampROMImageDef);i++)
+  47   1          {
+  48   2          MADRL = i;
+  49   2          MADRH = i>>8; //设置地址
+  50   2          _nop_();  
+  51   2          MCTRL = 0x11; //对数据区进行读取操作
   52   2          _nop_();
   53   2          _nop_();
   54   2          _nop_();
-C51 COMPILER V9.60.0.0   RAMPCONFIG                                                        11/09/2024 20:04:55 PAGE 2   
+C51 COMPILER V9.60.0.0   RAMPCONFIG                                                        11/10/2024 11:12:36 PAGE 2   
 
   55   2          _nop_();
-  56   2          _nop_();   //等待6个周期后开始判断数据内容
-  57   2          while(MCTRL & 0x01); //等待读取结束
-  58   2          //读取结束，写入内容
-  59   2          ROMData.ByteBuf[i]=MDATA;
-  60   2          }
-  61   1        //读取操作完毕，锁定flash 
-  62   1        MLOCK = 0x55;   
-  63   1        _nop_();
-  64   1        EA=1; //重新启用中断
-  65   1        //进行读出数据的校验
-  66   1        if(ROMData.Data.CheckSum==PEC8Check(ROMData.Data.RampConfig.ByteBuf,sizeof(RampStorDef)))
-  67   1          {
-  68   2          //校验成功，加载数据
-  69   2          MoonCfg=ROMData.Data.RampConfig.Data.MoonCfg;
-  70   2          RampCfg.Current=ROMData.Data.RampConfig.Data.RampCurrent;
-  71   2          IsRampEnabled=ROMData.Data.RampConfig.Data.IsRampEnabled?1:0;
-  72   2          }
-  73   1        //校验失败重建数据
-  74   1        else 
-  75   1          {
-  76   2          MoonCfg=MoonLight_10mA; //出厂默认为10mA月光
-  77   2          RampCfg.Current=800;
-  78   2          for(i=0;i<ModeTotalDepth;i++)if(ModeSettings[i].ModeIdx==Mode_Ramp)
-  79   2            RampCfg.Current=ModeSettings[i].MinCurrent; //找到挡位数据中无极调光的挡位
-  80   2          IsRampEnabled=0; //默认为挡位模式
-  81   2          SaveRampConfig(1); //重建数据后立即保存参数
-  82   2          }
-  83   1        }
-  84          
-  85          //恢复到无极调光模式的最低电流
-  86          void RestoreToMinimumRampCurrent(void)  
-  87            {
-  88   1        int i;
-  89   1        extern code ModeStrDef ModeSettings[ModeTotalDepth];
-  90   1        RampCfg.Current=800;
-  91   1        for(i=0;i<ModeTotalDepth;i++)if(ModeSettings[i].ModeIdx==Mode_Ramp)
-  92   1            RampCfg.Current=ModeSettings[i].MinCurrent; //找到挡位数据中无极调光的挡位
-  93   1        }
-  94          
-  95          //保存无极调光配置
-  96          void SaveRampConfig(bit IsForceSave)
-  97            {
-  98   1        int i;
-  99   1        RampROMImg ROMData,SavedData;
- 100   1        //禁止中断并解锁flash
- 101   1        EA=0;
- 102   1        _nop_();
- 103   1        MLOCK = 0xAA; 
- 104   1        //开始读取
- 105   1        if(!IsForceSave)for(i=0;i<sizeof(RampROMImageDef);i++)
- 106   1          {
- 107   2          MADRL=i&0xFF;
- 108   2          MADRH=(i>>8)&0xFF; //设置地址
- 109   2          _nop_();  
- 110   2          MCTRL = 0x11; //对数据区进行读取操作
- 111   2          _nop_();
- 112   2          _nop_();
- 113   2          _nop_();
+  56   2          _nop_();
+  57   2          _nop_();   //等待6个周期后开始判断数据内容
+  58   2          while(MCTRL & 0x01); //等待读取结束
+  59   2          //读取结束，写入内容
+  60   2          ROMData.ByteBuf[i]=MDATA;
+  61   2          }
+  62   1        //读取操作完毕，锁定flash 
+  63   1        MLOCK = 0x55;   
+  64   1        _nop_();
+  65   1        EA=1; //重新启用中断
+  66   1        //进行读出数据的校验
+  67   1        if(ROMData.Data.CheckSum==PEC8Check(ROMData.Data.RampConfig.ByteBuf,sizeof(RampStorDef)))
+  68   1          {
+  69   2          //校验成功，加载数据
+  70   2          LEDBrightNess=ROMData.Data.RampConfig.Data.SideLEDBrightness;
+  71   2          MoonCfg=ROMData.Data.RampConfig.Data.MoonCfg;
+  72   2          RampCfg.Current=ROMData.Data.RampConfig.Data.RampCurrent;
+  73   2          IsRampEnabled=ROMData.Data.RampConfig.Data.IsRampEnabled?1:0;
+  74   2          }
+  75   1        //校验失败重建数据
+  76   1        else 
+  77   1          {
+  78   2          MoonCfg=MoonLight_10mA; //出厂默认为10mA月光
+  79   2          RampCfg.Current=800;
+  80   2          LEDBrightNess=2399; //使用默认亮度
+  81   2          for(i=0;i<ModeTotalDepth;i++)if(ModeSettings[i].ModeIdx==Mode_Ramp)
+  82   2            RampCfg.Current=ModeSettings[i].MinCurrent; //找到挡位数据中无极调光的挡位
+  83   2          IsRampEnabled=0; //默认为挡位模式
+  84   2          SaveRampConfig(1); //重建数据后立即保存参数
+  85   2          }
+  86   1        }
+  87          
+  88          //恢复到无极调光模式的最低电流
+  89          void RestoreToMinimumRampCurrent(void)  
+  90            {
+  91   1        int i;
+  92   1        extern code ModeStrDef ModeSettings[ModeTotalDepth];
+  93   1        RampCfg.Current=800;
+  94   1        for(i=0;i<ModeTotalDepth;i++)if(ModeSettings[i].ModeIdx==Mode_Ramp)
+  95   1            RampCfg.Current=ModeSettings[i].MinCurrent; //找到挡位数据中无极调光的挡位
+  96   1        }
+  97          
+  98          //保存无极调光配置
+  99          void SaveRampConfig(bit IsForceSave)
+ 100            {
+ 101   1        int i;
+ 102   1        RampROMImg ROMData,SavedData;
+ 103   1        //禁止中断并解锁flash
+ 104   1        EA=0;
+ 105   1        _nop_();
+ 106   1        MLOCK = 0xAA; 
+ 107   1        //开始读取
+ 108   1        if(!IsForceSave)for(i=0;i<sizeof(RampROMImageDef);i++)
+ 109   1          {
+ 110   2          MADRL=i&0xFF;
+ 111   2          MADRH=(i>>8)&0xFF; //设置地址
+ 112   2          _nop_();  
+ 113   2          MCTRL = 0x11; //对数据区进行读取操作
  114   2          _nop_();
  115   2          _nop_();
- 116   2          _nop_();   //等待6个周期后开始判断数据内容
-C51 COMPILER V9.60.0.0   RAMPCONFIG                                                        11/09/2024 20:04:55 PAGE 3   
+ 116   2          _nop_();
+C51 COMPILER V9.60.0.0   RAMPCONFIG                                                        11/10/2024 11:12:36 PAGE 3   
 
- 117   2          while(MCTRL & 0x01); //等待读取结束
- 118   2          //读取结束，写入内容
- 119   2          ROMData.ByteBuf[i]=MDATA;
- 120   2          }
- 121   1        //开始进行数据构建
- 122   1        SavedData.Data.RampConfig.Data.MoonCfg=MoonCfg;
- 123   1        SavedData.Data.RampConfig.Data.RampCurrent=RampCfg.Current;
- 124   1        SavedData.Data.RampConfig.Data.IsRampEnabled=IsRampEnabled?true:false;
- 125   1        SavedData.Data.CheckSum=PEC8Check(SavedData.Data.RampConfig.ByteBuf,sizeof(RampStorDef)); //计算CRC
- 126   1        //进行数据比对
- 127   1        if(!IsForceSave&&SavedData.Data.CheckSum==ROMData.Data.CheckSum)
- 128   1          {
- 129   2          MLOCK = 0x55;   
- 130   2          _nop_();
- 131   2          EA=1; //重新启用中断
- 132   2          return; //跳过保存操作，数据相同  
- 133   2          }
- 134   1        //数据需要保存，开始擦除
- 135   1        MADRL=0;
- 136   1        MADRH=0;
- 137   1        _nop_();
- 138   1        MCTRL  = 0x1D;    //对数据区进行擦除
- 139   1        _nop_();
- 140   1        _nop_();
+ 117   2          _nop_();
+ 118   2          _nop_();
+ 119   2          _nop_();   //等待6个周期后开始判断数据内容
+ 120   2          while(MCTRL & 0x01); //等待读取结束
+ 121   2          //读取结束，写入内容
+ 122   2          ROMData.ByteBuf[i]=MDATA;
+ 123   2          }
+ 124   1        //开始进行数据构建
+ 125   1        SavedData.Data.RampConfig.Data.SideLEDBrightness=LEDBrightNess;
+ 126   1        SavedData.Data.RampConfig.Data.MoonCfg=MoonCfg;
+ 127   1        SavedData.Data.RampConfig.Data.RampCurrent=RampCfg.Current;
+ 128   1        SavedData.Data.RampConfig.Data.IsRampEnabled=IsRampEnabled?true:false;
+ 129   1        SavedData.Data.CheckSum=PEC8Check(SavedData.Data.RampConfig.ByteBuf,sizeof(RampStorDef)); //计算CRC
+ 130   1        //进行数据比对
+ 131   1        if(!IsForceSave&&SavedData.Data.CheckSum==ROMData.Data.CheckSum)
+ 132   1          {
+ 133   2          MLOCK = 0x55;   
+ 134   2          _nop_();
+ 135   2          EA=1; //重新启用中断
+ 136   2          return; //跳过保存操作，数据相同  
+ 137   2          }
+ 138   1        //数据需要保存，开始擦除
+ 139   1        MADRL=0;
+ 140   1        MADRH=0;
  141   1        _nop_();
- 142   1        _nop_();
+ 142   1        MCTRL  = 0x1D;    //对数据区进行擦除
  143   1        _nop_();
- 144   1        _nop_();  
- 145   1        while(MCTRL & 0x01)if(MCTRL&0x20)return;      //等待擦除结束
- 146   1        //开始保存数据
- 147   1        for(i=0;i<sizeof(RampROMImageDef);i++)  
- 148   1          {
- 149   2          MDATA=SavedData.ByteBuf[i];
- 150   2          //设置地址
- 151   2          MADRL=i&0xFF;
- 152   2          MADRH=(i>>8)&0xFF;
- 153   2          _nop_();
- 154   2          MCTRL  = 0x19;    //对数据区进行写入
- 155   2          _nop_();
- 156   2          _nop_();
+ 144   1        _nop_();
+ 145   1        _nop_();
+ 146   1        _nop_();
+ 147   1        _nop_();
+ 148   1        _nop_();  
+ 149   1        while(MCTRL & 0x01)if(MCTRL&0x20)return;      //等待擦除结束
+ 150   1        //开始保存数据
+ 151   1        for(i=0;i<sizeof(RampROMImageDef);i++)  
+ 152   1          {
+ 153   2          MDATA=SavedData.ByteBuf[i];
+ 154   2          //设置地址
+ 155   2          MADRL=i&0xFF;
+ 156   2          MADRH=(i>>8)&0xFF;
  157   2          _nop_();
- 158   2          _nop_();
+ 158   2          MCTRL  = 0x19;    //对数据区进行写入
  159   2          _nop_();
- 160   2          _nop_();  
- 161   2          while(MCTRL & 0x01)if(MCTRL&0x20)return;      //等待写入结束
- 162   2          }
- 163   1        //操作完毕，重新使能中断
- 164   1        MLOCK = 0x55;   
- 165   1        _nop_();
- 166   1        EA=1; //重新启用中断
- 167   1        } 
+ 160   2          _nop_();
+ 161   2          _nop_();
+ 162   2          _nop_();
+ 163   2          _nop_();
+ 164   2          _nop_();  
+ 165   2          while(MCTRL & 0x01)if(MCTRL&0x20)return;      //等待写入结束
+ 166   2          }
+ 167   1        //操作完毕，重新使能中断
+ 168   1        MLOCK = 0x55;   
+ 169   1        _nop_();
+ 170   1        EA=1; //重新启用中断
+ 171   1        } 
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    691    ----
+   CODE SIZE        =    722    ----
    CONSTANT SIZE    =     41    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
-   DATA SIZE        =   ----      35
+C51 COMPILER V9.60.0.0   RAMPCONFIG                                                        11/10/2024 11:12:36 PAGE 4   
+
+   DATA SIZE        =   ----      41
    IDATA SIZE       =   ----    ----
    BIT SIZE         =   ----       1
    EDATA SIZE       =   ----    ----
-C51 COMPILER V9.60.0.0   RAMPCONFIG                                                        11/09/2024 20:04:55 PAGE 4   
-
    HDATA SIZE       =   ----    ----
    XDATA CONST SIZE =   ----    ----
    FAR CONST SIZE   =   ----    ----

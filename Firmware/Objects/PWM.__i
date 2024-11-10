@@ -1,0 +1,1 @@
+"Hardware\PWM.c" OMF2 OPTIMIZE (9,SPEED) BROWSE INCDIR(.\include;.\StdDriver\inc;.\Hardware) DEBUG PRINT(.\Listings\PWM.lst) TABS (2) OBJECT(.\Objects\PWM.obj)

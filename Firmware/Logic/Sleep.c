@@ -26,6 +26,7 @@ static void SystemPeripheralCTRL(bit IsEnable)
 		PWM_Init(); //初始化PWM发生器
 		OutputChannel_Init(); //初始化输出通道
 		VshowFSMState=BattVdis_Waiting; //复位为休眠状态
+		LEDMgmt_SwitchToPWM(); //把侧按管理器切换为PWM状态
 		WDog_Init(); //启动看门狗
 		return;
 		}

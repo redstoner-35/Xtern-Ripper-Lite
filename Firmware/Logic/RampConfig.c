@@ -2,6 +2,7 @@
 #include "cms8s6990.h"
 #include "stdbool.h"
 #include "RampConfig.h"
+#include "LEDMgmt.h"
 
 //隐藏在ROM里面的彩蛋
 code char VendorString[]="Xtern Ripper Lite V1.0 By:Redstoner_35\x0D\x0A";
@@ -66,6 +67,7 @@ void ReadRampConfig(void)
 	if(ROMData.Data.CheckSum==PEC8Check(ROMData.Data.RampConfig.ByteBuf,sizeof(RampStorDef)))
 		{
 		//校验成功，加载数据
+		LEDBrightNess=ROMData.Data.RampConfig.Data.SideLEDBrightness;
 		MoonCfg=ROMData.Data.RampConfig.Data.MoonCfg;
 		RampCfg.Current=ROMData.Data.RampConfig.Data.RampCurrent;
 		IsRampEnabled=ROMData.Data.RampConfig.Data.IsRampEnabled?1:0;
@@ -75,6 +77,7 @@ void ReadRampConfig(void)
 		{
 		MoonCfg=MoonLight_10mA; //出厂默认为10mA月光
 		RampCfg.Current=800;
+		LEDBrightNess=2399; //使用默认亮度
 		for(i=0;i<ModeTotalDepth;i++)if(ModeSettings[i].ModeIdx==Mode_Ramp)
 			RampCfg.Current=ModeSettings[i].MinCurrent; //找到挡位数据中无极调光的挡位
 		IsRampEnabled=0; //默认为挡位模式
@@ -119,6 +122,7 @@ void SaveRampConfig(bit IsForceSave)
 		ROMData.ByteBuf[i]=MDATA;
 		}
   //开始进行数据构建
+	SavedData.Data.RampConfig.Data.SideLEDBrightness=LEDBrightNess;
 	SavedData.Data.RampConfig.Data.MoonCfg=MoonCfg;
   SavedData.Data.RampConfig.Data.RampCurrent=RampCfg.Current;
 	SavedData.Data.RampConfig.Data.IsRampEnabled=IsRampEnabled?true:false;

@@ -7,6 +7,7 @@
 typedef struct
 	{
 	int RampCurrent;
+	int SideLEDBrightness;
 	bool IsRampEnabled;
 	MoonLightBrightnessDef MoonCfg;
 	}RampStorDef;

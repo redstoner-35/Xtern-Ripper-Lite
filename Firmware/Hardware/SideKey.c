@@ -104,7 +104,7 @@ void SideKey_Int_Callback(void)
 		}
 	//禁止INT0中断
 	GPIO_DisableInt(SideKeyGPIOG,GPIOMask(SideKeyGPIOx)); //禁止中断功能
-	KeyState=0xAA; //复位检测模块
+	KeyState=0x0A; //复位检测模块
 	}
 
 //标记按键按下
@@ -133,6 +133,7 @@ static void ClickAndHoldEventHandler(int PressCount)
 //侧按键逻辑处理函数
 void SideKey_LogicHandler(void)
   {		
+	unsigned char buf;
 	//对按键进行去抖以及重新打开中断的判断
 	if(!GPIO_CheckIfIntEnabled(SideKeyGPIOG,GPIOMask(SideKeyGPIOx)))
 		{
@@ -140,11 +141,12 @@ void SideKey_LogicHandler(void)
 		if(KeyPress)KeyState|=0x01;
 		else KeyState&=0xFE;  //附加结果
 		//重新打开中断
-		if(KeyState==0xFF||KeyState==0x00)
+		buf=KeyState&0x0F;
+		if(buf==0x0F||KeyState==0x00)
 			{
 			P0EXTIF=0;//清除GPIO Flag
-			IsKeyPressed=KeyState==0xFF?0:1; //更新按键状态	
-			GPIO_SetExtIntMode(SideKeyGPIOG,SideKeyGPIOx,KeyState==0xFF?GPIO_Int_Falling:GPIO_Int_Rising);//如果当前按键是松开状态则设置为下降沿，否则设置为上升沿
+			IsKeyPressed=buf==0x0F?0:1; //更新按键状态	
+			GPIO_SetExtIntMode(SideKeyGPIOG,SideKeyGPIOx,buf==0x0F?GPIO_Int_Falling:GPIO_Int_Rising);//如果当前按键是松开状态则设置为下降沿，否则设置为上升沿
 			GPIO_EnableInt(SideKeyGPIOG,GPIOMask(SideKeyGPIOx)); //使能中断功能
 			}
 		}	

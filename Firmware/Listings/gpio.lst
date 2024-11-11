@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   GPIO                                                              11/09/2024 20:02:42 PAGE 1   
+C51 COMPILER V9.60.0.0   GPIO                                                              11/11/2024 12:34:53 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE GPIO
@@ -62,7 +62,7 @@ line level    source
   52          
   53          /****************************************************************************/
   54          /*  Local function prototypes('static')
-C51 COMPILER V9.60.0.0   GPIO                                                              11/09/2024 20:02:42 PAGE 2   
+C51 COMPILER V9.60.0.0   GPIO                                                              11/11/2024 12:34:53 PAGE 2   
 
   55          ****************************************************************************/
   56          
@@ -126,7 +126,7 @@ line level    source
  114   2          case GPIO0:
  115   2            P0TRIS=(TRISMSK&0x100)?P0TRIS|(TRISMSK&0xFF):P0TRIS&(TRISMSK&0xFF);
  116   2            P0OD=(ODMSK&0x100)?P0OD|(ODMSK&0xFF):P0OD&(ODMSK&0xFF);
-C51 COMPILER V9.60.0.0   GPIO                                                              11/09/2024 20:02:42 PAGE 3   
+C51 COMPILER V9.60.0.0   GPIO                                                              11/11/2024 12:34:53 PAGE 3   
 
  117   2            P0UP=(UPMSK&0x100)?P0UP|(UPMSK&0xFF):P0UP&(UPMSK&0xFF);
  118   2            P0RD=(RDMSK&0x100)?P0RD|(RDMSK&0xFF):P0RD&(RDMSK&0xFF);
@@ -190,7 +190,7 @@ line level    source
  176   2            break;
  177   2          default:
  178   2            break;  
-C51 COMPILER V9.60.0.0   GPIO                                                              11/09/2024 20:02:42 PAGE 4   
+C51 COMPILER V9.60.0.0   GPIO                                                              11/11/2024 12:34:53 PAGE 4   
 
  179   2        }
  180   1      }
@@ -254,7 +254,7 @@ line level    source
  238   2          case GPIO3:
  239   2            P3EXTIE &= ~PinMSK;
  240   2            break;
-C51 COMPILER V9.60.0.0   GPIO                                                              11/09/2024 20:02:42 PAGE 5   
+C51 COMPILER V9.60.0.0   GPIO                                                              11/11/2024 12:34:53 PAGE 5   
 
  241   2          default:
  242   2            break;  
@@ -318,7 +318,7 @@ line level    source
  300           **  (4)P3的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_2、GPIO_PIN_5、GPIO_PIN_6
  301           ******************************************************************************/
  302          void GPIO_SetExtIntMode(uint8_t Port, uint8_t PinNum, uint8_t Mode)
-C51 COMPILER V9.60.0.0   GPIO                                                              11/09/2024 20:02:42 PAGE 6   
+C51 COMPILER V9.60.0.0   GPIO                                                              11/11/2024 12:34:53 PAGE 6   
 
  303          {
  304   1       //检查参数
@@ -382,7 +382,7 @@ line level    source
  362   2             flag=P1EXTIE&(1<<PinNum);
  363   2             break;   
  364   2          case GPIO2:
-C51 COMPILER V9.60.0.0   GPIO                                                              11/09/2024 20:02:42 PAGE 7   
+C51 COMPILER V9.60.0.0   GPIO                                                              11/11/2024 12:34:53 PAGE 7   
 
  365   2             if(PinNum>6||PinNum<1)return GPIO_Int_Disable;
  366   2             PCFG=&P21EICFG+(PinNum-1);
@@ -446,7 +446,7 @@ line level    source
  424   1       //开始设置
  425   1        switch(Port)
  426   1          {
-C51 COMPILER V9.60.0.0   GPIO                                                              11/09/2024 20:02:42 PAGE 8   
+C51 COMPILER V9.60.0.0   GPIO                                                              11/11/2024 12:34:53 PAGE 8   
 
  427   2          case GPIO0:
  428   2             if(PinNum>5)return;
@@ -469,79 +469,79 @@ line level    source
  445   1      *PCFG=Mode&0x1F; //写入设置值
  446   1      }
  447          
- 448           /******************************************************************************
- 449           ** \brief   GPIO_GetIntFlag
- 450           **      获取中断标志
- 451           ** \param [in] Port  ： GPIO0、GPIO1、GPIO2、GPIO3
- 452           **         PinNum:  GPIO_PIN_0~GPIO_PIN_7 (0~7)     
- 453           ** \return  0：无中断产生
- 454           **      1：有中断产生
- 455           ** \note  
- 456           **  (1)P0的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_5
- 457           **  (2)P1的PinNum输入值范围：GPIO_PIN_3~GPIO_PIN_7
- 458           **  (3)P2的PinNum输入值范围：GPIO_PIN_1~GPIO_PIN_6
- 459           **  (4)P3的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_2、GPIO_PIN_5、GPIO_PIN_6
- 460           ******************************************************************************/
- 461          uint8_t  GPIO_GetIntFlag(uint8_t Port, uint8_t PinNum)
- 462          {
- 463   1        uint8_t PinIntFlag = 0;
- 464   1        switch(Port)
- 465   1        {
- 466   2          case GPIO0:
- 467   2            PinIntFlag = P0EXTIF & (1<<PinNum);
- 468   2            break;
- 469   2          case GPIO1:
- 470   2            PinIntFlag = P1EXTIF & (1<<PinNum);
- 471   2            break;    
- 472   2          case GPIO2:
- 473   2            PinIntFlag = P2EXTIF & (1<<PinNum);
- 474   2            break;  
- 475   2          case GPIO3:
- 476   2            PinIntFlag = P3EXTIF & (1<<PinNum);
- 477   2            break;
- 478   2          default:
- 479   2            break;  
- 480   2        }
- 481   1        return( (PinIntFlag)? 1:0);
- 482   1      }
- 483           /********************************************************************************
- 484           ** \brief   GPIO_ClearIntFlag
- 485           **     清除中断标志位
- 486           ** \param [in] Port  ： GPIO0、GPIO1、GPIO2、GPIO3
- 487           **         PinNum:  GPIO_PIN_0~GPIO_PIN_7 (0~7)     
- 488           ** \return  none
-C51 COMPILER V9.60.0.0   GPIO                                                              11/09/2024 20:02:42 PAGE 9   
+ 448          // /******************************************************************************
+ 449          // ** \brief   GPIO_GetIntFlag
+ 450          // **      获取中断标志
+ 451          // ** \param [in] Port  ： GPIO0、GPIO1、GPIO2、GPIO3
+ 452          // **         PinNum:  GPIO_PIN_0~GPIO_PIN_7 (0~7)     
+ 453          // ** \return  0：无中断产生
+ 454          // **      1：有中断产生
+ 455          // ** \note  
+ 456          // **  (1)P0的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_5
+ 457          // **  (2)P1的PinNum输入值范围：GPIO_PIN_3~GPIO_PIN_7
+ 458          // **  (3)P2的PinNum输入值范围：GPIO_PIN_1~GPIO_PIN_6
+ 459          // **  (4)P3的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_2、GPIO_PIN_5、GPIO_PIN_6
+ 460          // ******************************************************************************/
+ 461          //uint8_t  GPIO_GetIntFlag(uint8_t Port, uint8_t PinNum)
+ 462          //{
+ 463          //  uint8_t PinIntFlag = 0;
+ 464          //  switch(Port)
+ 465          //  {
+ 466          //    case GPIO0:
+ 467          //      PinIntFlag = P0EXTIF & (1<<PinNum);
+ 468          //      break;
+ 469          //    case GPIO1:
+ 470          //      PinIntFlag = P1EXTIF & (1<<PinNum);
+ 471          //      break;    
+ 472          //    case GPIO2:
+ 473          //      PinIntFlag = P2EXTIF & (1<<PinNum);
+ 474          //      break;  
+ 475          //    case GPIO3:
+ 476          //      PinIntFlag = P3EXTIF & (1<<PinNum);
+ 477          //      break;
+ 478          //    default:
+ 479          //      break;  
+ 480          //  }
+ 481          //  return( (PinIntFlag)? 1:0);
+ 482          //}
+ 483          // /********************************************************************************
+ 484          // ** \brief   GPIO_ClearIntFlag
+ 485          // **     清除中断标志位
+ 486          // ** \param [in] Port  ： GPIO0、GPIO1、GPIO2、GPIO3
+ 487          // **         PinNum:  GPIO_PIN_0~GPIO_PIN_7 (0~7)     
+ 488          // ** \return  none
+C51 COMPILER V9.60.0.0   GPIO                                                              11/11/2024 12:34:53 PAGE 9   
 
- 489           ** \note  
- 490           **  (1)P0的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_5
- 491           **  (2)P1的PinNum输入值范围：GPIO_PIN_3~GPIO_PIN_7
- 492           **  (3)P2的PinNum输入值范围：GPIO_PIN_1~GPIO_PIN_6
- 493           **  (4)P3的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_2、GPIO_PIN_5、GPIO_PIN_6   
- 494           ******************************************************************************/
- 495          void GPIO_ClearIntFlag(uint8_t Port, uint8_t PinNum)
- 496          {
- 497   1        switch(Port)
- 498   1        {
- 499   2          case GPIO0:
- 500   2            P0EXTIF = 0xff &(~(1<<PinNum));
- 501   2            break;
- 502   2          case GPIO1:
- 503   2            P1EXTIF = 0xff &(~(1<<PinNum));     
- 504   2            break;    
- 505   2          case GPIO2:
- 506   2            P2EXTIF = 0xff &(~(1<<PinNum));
- 507   2            break;  
- 508   2          case GPIO3:
- 509   2            P3EXTIF = 0xff &(~(1<<PinNum));
- 510   2            break;
- 511   2          default:
- 512   2            break;  
- 513   2        }
- 514   1      }
+ 489          // ** \note  
+ 490          // **  (1)P0的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_5
+ 491          // **  (2)P1的PinNum输入值范围：GPIO_PIN_3~GPIO_PIN_7
+ 492          // **  (3)P2的PinNum输入值范围：GPIO_PIN_1~GPIO_PIN_6
+ 493          // **  (4)P3的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_2、GPIO_PIN_5、GPIO_PIN_6   
+ 494          // ******************************************************************************/
+ 495          //void GPIO_ClearIntFlag(uint8_t Port, uint8_t PinNum)
+ 496          //{
+ 497          //  switch(Port)
+ 498          //  {
+ 499          //    case GPIO0:
+ 500          //      P0EXTIF = 0xff &(~(1<<PinNum));
+ 501          //      break;
+ 502          //    case GPIO1:
+ 503          //      P1EXTIF = 0xff &(~(1<<PinNum));     
+ 504          //      break;    
+ 505          //    case GPIO2:
+ 506          //      P2EXTIF = 0xff &(~(1<<PinNum));
+ 507          //      break;  
+ 508          //    case GPIO3:
+ 509          //      P3EXTIF = 0xff &(~(1<<PinNum));
+ 510          //      break;
+ 511          //    default:
+ 512          //      break;  
+ 513          //  }
+ 514          //}
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =   1686    ----
+   CODE SIZE        =   1530    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----

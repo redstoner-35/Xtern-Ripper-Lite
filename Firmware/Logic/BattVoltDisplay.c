@@ -5,6 +5,7 @@
 #include "SideKey.h"
 #include "cms8s6990.h"
 #include "BattDisplay.h"
+#include "PinDefs.h"
 
 //平均计算结构体
 typedef struct
@@ -23,13 +24,17 @@ void DisplayErrorIDHandler(void);
 static xdata char BattShowTimer=0; //电池电量显示命令
 static xdata BattStatusDef BattState; //电池电量标记位
 static xdata AverageCalcDef BattVolt;	
-xdata float Battery; //电池电压
+xdata float Battery; //等效单节电池电压
+xdata char VbattCellCount=3; //系统的电池节数
 bit IsBatteryAlert; //电池电压低于警告值	
 bit IsBatteryFault; //电池电压低于保护值		
 static xdata int VshowTIM=0;
 static xdata float VbattSample; //取样的电池电压
 xdata BattVshowFSMDef VshowFSMState; //电池电压显示所需的计时器和状态机转移
 
+//内部sbit
+sbit CSPin=BATTSELIOP^BATTSELIOx;	
+	
 //启动电池电压显示
 void TriggerVshowDisplay(void)	
 	{
@@ -148,6 +153,20 @@ static void BatVshowFSM(void)
 //在启动时显示电池电压
 void DisplayVBattAtStart(void)
 	{
+	GPIOCfgDef CSInitCfg;
+	int i;
+	//检测电池节数并刷新等效单节电池的电压
+	CSInitCfg.Mode=GPIO_IPU;
+  CSInitCfg.Slew=GPIO_Slow_Slew;		
+	CSInitCfg.DRVCurrent=GPIO_High_Current; //配置为上拉输入
+	GPIO_SetMUXMode(BATTSELIOG,BATTSELIOx,GPIO_AF_GPIO);
+	GPIO_ConfigGPIOMode(BATTSELIOG,GPIOMask(BATTSELIOx),&CSInitCfg); //配置为上拉输入
+	delay_ms(5);	
+	VbattCellCount=CSPin?3:2; //根据外部strap的状态选择电池节数
+	CSPin=0;	
+	CSInitCfg.Mode=GPIO_Out_PP;	
+	GPIO_ConfigGPIOMode(BATTSELIOG,GPIOMask(BATTSELIOx),&CSInitCfg); //检测完毕，配置为推挽输出	
+	SystemTelemHandler();
 	//提前更新电池电量状态
 	if(Data.BatteryVoltage<2.9)BattState=Battery_VeryLow; //电池电压低于2.8，直接报告严重不足
 	else if(Data.BatteryVoltage<3.2)BattState=Battery_Low; //电池电压低于3.2则切换到电量低的状态
@@ -166,7 +185,16 @@ void DisplayVBattAtStart(void)
 	VbattSample=Data.RawBattVolt; 
 	VshowFSMState=BattVdis_Waiting; //显示状态设置为等待
 	//启动电池电量显示(仅无错误的情况下)
-	if(ErrCode==Fault_None)BattShowTimer=0x80;
+	if(ErrCode==Fault_None)
+		{
+	  for(i=0;i<VbattCellCount;i++)
+			 {
+			 MakeFastStrobe(LED_Amber);
+			 delay_ms(160);
+			 }
+		delay_ms(400);
+	  BattShowTimer=0x80;
+		}
 	}
 //电池电量显示延时的处理
 void BattDisplayTIM(void)
@@ -222,7 +250,8 @@ void BatteryTelemHandler(void)
 	else //正常进行警报
 		 {
 		 AlertThr=(float)(CurrentMode->LowVoltThres)/(float)1000; //从当前目标挡位读取模式值  
-		 IsBatteryAlert=Battery>AlertThr?0:1; //警报bit
+		 if((Data.OutputVoltage/Data.RawBattVolt)>0.86)IsBatteryAlert=1; //输出输入比值大于86%，DCDC芯片已经饱和，强制降档
+		 else IsBatteryAlert=Battery>AlertThr?0:1; //警报bit
 		 IsBatteryFault=Battery>2.7?0:1; //故障bit
 		 if(IsBatteryFault)IsBatteryAlert=0; //故障bit置起后强制清除警报bit
 		 }

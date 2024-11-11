@@ -76,7 +76,7 @@ code ModeStrDef ModeSettings[ModeTotalDepth]=
     //极亮
 		{
 		Mode_Turbo,
-		14000,  //14000mA电流
+		15000,  //15A电流
 		0,   //最小电流没用到，无视
 		3200,  //3.2V关断
 		false, //极亮不能带记忆
@@ -464,12 +464,17 @@ void ModeSwitchFSM(void)
 					}			
 			else if(ClickCount==2)  //双击一键极亮		
 					{
-					if(IsDisableTurbo)break; //手电温度过高锁死极亮，不做反应
+					if(IsDisableTurbo)LEDMode=LED_RedBlinkFifth; //手电温度过高锁死极亮，提示无法开启
 				  else if(Battery>3.1)SwitchToGear(Mode_Turbo); //电池电量充足正常开启
-					else SwitchToGear(IsRampEnabled?Mode_Ramp:LastMode);  //电池电池电量不足时双击进入普通模式
+					else if(Battery>2.7)SwitchToGear(IsRampEnabled?Mode_Ramp:LastMode);  //电池电池电量不足时双击进入普通模式
+					else LEDMode=LED_RedBlinkFifth; //电量不足五次闪烁提示
 					}
       else if(IsHoldEvent)SwitchToGear(Mode_Moon); //长按开机直接进月光					
-			else if(ClickCount==3)SwitchToGear(Mode_Strobe); //侧按三击进入爆闪   
+			else if(ClickCount==3)//侧按三击进入爆闪 
+					{
+			    if(Battery>2.7)SwitchToGear(Mode_Strobe);   //进入爆闪
+					else LEDMode=LED_RedBlinkFifth; //电量不足五次闪烁提示
+					}
 			else if(ClickCount==4) //四击切换挡位模式和无极调光
 					{	
 					IsRampEnabled=IsRampEnabled?0:1; //转换无极调光状态	

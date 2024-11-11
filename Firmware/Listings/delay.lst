@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   DELAY                                                             11/09/2024 20:02:42 PAGE 1   
+C51 COMPILER V9.60.0.0   DELAY                                                             11/11/2024 12:36:47 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE DELAY
@@ -62,7 +62,7 @@ line level    source
   51          
   52          //系统心跳定时器的中断处理  
   53          void Timer2_IRQHandler(void) interrupt TMR2_VECTOR
-C51 COMPILER V9.60.0.0   DELAY                                                             11/09/2024 20:02:42 PAGE 2   
+C51 COMPILER V9.60.0.0   DELAY                                                             11/11/2024 12:36:47 PAGE 2   
 
   54          { 
   55   1        T2IF=0x00; //清零T2中断
@@ -126,7 +126,7 @@ line level    source
  113   2          CNT=(long)ms*4000; //T0一个周期是48/12=4MHz=0.25uS
  114   2          CNT/=(long)repcounter; //除以重复次数得到单次计数值
  115   2          }
-C51 COMPILER V9.60.0.0   DELAY                                                             11/09/2024 20:02:42 PAGE 3   
+C51 COMPILER V9.60.0.0   DELAY                                                             11/11/2024 12:36:47 PAGE 3   
 
  116   1        while(CNT>=65535); //反复循环确保定时器值小于65535
  117   1        CNT=0xFFFF-CNT; //计算结束，将16bit计数器满的值加载到定时器内

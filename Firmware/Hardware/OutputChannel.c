@@ -17,6 +17,7 @@ sbit HShuntSEL=HShuntSelIOP^HShuntSelIOx; //主输出分流器选择位
 //内部变量
 xdata int Current; //目标电流(mA)
 static xdata int CurrentBuf;
+static xdata char IsEnableDCDCCounter=0; //延时启用DCDC的计时器
 
 //初始化函数
 void OutputChannel_Init(void)
@@ -46,7 +47,7 @@ void OutputChannel_TestRun(void)
 	{
 	int retry=64,i;
 	xdata float LastOutput[5]={0};
-  float buf,Err;
+  xdata float buf,Err;
 	//检查是否由看门狗导致复位	
 	if(GetIfWDogCauseRST())	
 		{
@@ -126,9 +127,10 @@ void OutputChannel_DeInit(void)
 static float Duty_Calc(float ShuntmOhm,int Current,float Offset)
 	{
 	float buf;
-	buf=((float)Current*Offset)*ShuntmOhm; //输入传进来的电流(mA)并乘以检流电阻阻值(mR)得到运放端整定电压(uV)
+	buf=(float)Current*ShuntmOhm; //输入传进来的电流(mA)并乘以检流电阻阻值(mR)得到运放端整定电压(uV)
 	buf/=(float)1000; //uV转mV
 	buf/=((float)VdivDownResK/(float)(VdivUpResK+VdivDownResK+PWMDACResK)); //将运放端整定电压除以电阻的分压比例得到DAC端的电压
+	buf*=Offset; //乘以矫正系数修正电流
 	buf/=Data.MCUVDD*(float)1000; //计算出目标DAC输出电压和PWMDAC缓冲器供电电压(MCUVDD)之间的比值
 	buf*=100; //转换为百分比
 	//进行限幅和结果输出	
@@ -140,13 +142,23 @@ static float Duty_Calc(float ShuntmOhm,int Current,float Offset)
 //输出通道计算
 void OutputChannel_Calc(void)
 	{
+	//延时启用DCDC	
+	if(IsEnableDCDCCounter&&!IsNeedToUploadPWM)	
+		{
+		IsEnableDCDCCounter--;
+		if(!IsEnableDCDCCounter)DCDCEN=1; //时间到，打开DCDC
+		}
 	//避免无效的重复计算
 	if(CurrentBuf==Current)return;
 	CurrentBuf=Current;
 	//电流小于等于0，关闭所有输出
 	if(CurrentBuf<=0)
 		{
-		PWMDuty=0;
+		if(CurrentMode->ModeIdx!=Mode_Strobe) //非爆闪模式下清零PWMDAC基准输出
+			{
+	    PWMDuty=0;
+		  IsNeedToUploadPWM=1;
+			}
 		RevPGate=CurrentBuf==-1?1:0;
 		DCDCEN=0;
 		LShuntSEL=0;
@@ -156,20 +168,21 @@ void OutputChannel_Calc(void)
 	else if(CurrentBuf<AUXChannelImax)
 		{
 		PWMDuty=Duty_Calc(AUXChannelShuntmOhm,CurrentBuf,LowShuntIOffset);
-		RevPGate=Data.MCUVDD<9.5?1:0;   //低输出电流且输入功率不大时下关闭防反接FET节省能量
-		DCDCEN=1;
+		RevPGate=Data.RawBattVolt<9.5?1:0;   //低输出电流且输入功率不大时下关闭防反接FET节省能量
+		if(!DCDCEN)IsEnableDCDCCounter=PWMDACSettleDelay; //如果当前DCDC是关闭状态则延时一段时间再打开
 		LShuntSEL=1;  
 		HShuntSEL=0;  //启动DCDC，选择低量程通道
+		IsNeedToUploadPWM=1; //需要更新PWM输出
 		}
 	//电流大于辅助通道上限，使用主通道
 	else
 		{
 		PWMDuty=Duty_Calc(MainChannelShuntmOhm,CurrentBuf,HighShuntIOffset);
 		RevPGate=1;   //主输出启用，打开防反接FET提高能效
-		DCDCEN=1;
+		if(CurrentMode->ModeIdx==Mode_Strobe)DCDCEN=1; //爆闪模式需要很快的响应速度所以直接打开DCDC
+		else if(!DCDCEN)IsEnableDCDCCounter=PWMDACSettleDelay; //其余挡位则延时一段时间再打开
 		LShuntSEL=0;  
 		HShuntSEL=1;  //启动DCDC，选择高量程通道
-		}	
-	//PWM占空比发生变更，更新输出
-	IsNeedToUploadPWM=1;
+		IsNeedToUploadPWM=1; //需要更新PWM输出
+		}
 	}

@@ -58,8 +58,8 @@ static float PresentLIM(float IN)
 int ThermalILIMCalc(int Input)
 	{
 	float buf,ILED,itgbuf;
-	//温控被禁止，传入多少电流就返回多少	
-	if(!IsTempLIMActive)return Input;
+	//温控被禁止或者传入的电流小于等于0，传入多少电流就返回多少	
+	if(!IsTempLIMActive||Input<=0)return Input;
 	//附加比例项
 	buf=(float)TempProtBuf/(float)ProtFullScale; //换成比例项
 	buf*=100;

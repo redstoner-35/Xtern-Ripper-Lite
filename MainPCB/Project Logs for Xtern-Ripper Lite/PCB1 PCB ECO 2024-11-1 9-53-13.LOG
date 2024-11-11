@@ -1,6 +1,0 @@
-Change Component Comment : Designator=L1 Old Comment=XAL1010-221MEB New Comment=XAL1060-122MEB
-Change Component Description : Designator=L1 Old Description=Coilcraft Inductor XAL1010 Series New Description=Coilcraft Inductor XAL1070 Series
-Added Component: Designator=C7(0805_C)
-Added Pin To Net: NetName=GND Pin=C7-1
-Added Pin To Net: NetName=VLED+ Pin=C7-2
-Added Member To Class: ClassName=main Member=Component C7 22uF (226) 20% 25V

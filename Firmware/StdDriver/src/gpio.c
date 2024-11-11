@@ -445,70 +445,70 @@ void GPIO_SetMUXMode(uint8_t Port, uint8_t PinNum, uint8_t Mode)
 *PCFG=Mode&0x1F; //写入设置值
 }
 
- /******************************************************************************
- ** \brief	 GPIO_GetIntFlag
- **			 获取中断标志
- ** \param [in] Port  ： GPIO0、GPIO1、GPIO2、GPIO3
- **			    PinNum:  GPIO_PIN_0~GPIO_PIN_7 (0~7)		 
- ** \return  0：无中断产生
- **			 1：有中断产生
- ** \note  
- **  (1)P0的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_5
- **  (2)P1的PinNum输入值范围：GPIO_PIN_3~GPIO_PIN_7
- **  (3)P2的PinNum输入值范围：GPIO_PIN_1~GPIO_PIN_6
- **  (4)P3的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_2、GPIO_PIN_5、GPIO_PIN_6
- ******************************************************************************/
-uint8_t  GPIO_GetIntFlag(uint8_t Port, uint8_t PinNum)
-{
-	uint8_t PinIntFlag = 0;
-	switch(Port)
-	{
-		case GPIO0:
-			PinIntFlag = P0EXTIF & (1<<PinNum);
-			break;
-		case GPIO1:
-			PinIntFlag = P1EXTIF & (1<<PinNum);
-			break;		
-		case GPIO2:
-			PinIntFlag = P2EXTIF & (1<<PinNum);
-			break;	
-		case GPIO3:
-			PinIntFlag = P3EXTIF & (1<<PinNum);
-			break;
-		default:
-			break;	
-	}
-	return( (PinIntFlag)? 1:0);
-}
- /********************************************************************************
- ** \brief	 GPIO_ClearIntFlag
- **			清除中断标志位
- ** \param [in] Port  ： GPIO0、GPIO1、GPIO2、GPIO3
- **			    PinNum:  GPIO_PIN_0~GPIO_PIN_7 (0~7)		 
- ** \return  none
- ** \note  
- **  (1)P0的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_5
- **  (2)P1的PinNum输入值范围：GPIO_PIN_3~GPIO_PIN_7
- **  (3)P2的PinNum输入值范围：GPIO_PIN_1~GPIO_PIN_6
- **  (4)P3的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_2、GPIO_PIN_5、GPIO_PIN_6   
- ******************************************************************************/
-void GPIO_ClearIntFlag(uint8_t Port, uint8_t PinNum)
-{
-	switch(Port)
-	{
-		case GPIO0:
-			P0EXTIF = 0xff &(~(1<<PinNum));
-			break;
-		case GPIO1:
-			P1EXTIF = 0xff &(~(1<<PinNum));			
-			break;		
-		case GPIO2:
-			P2EXTIF = 0xff &(~(1<<PinNum));
-			break;	
-		case GPIO3:
-			P3EXTIF = 0xff &(~(1<<PinNum));
-			break;
-		default:
-			break;	
-	}
-}
+// /******************************************************************************
+// ** \brief	 GPIO_GetIntFlag
+// **			 获取中断标志
+// ** \param [in] Port  ： GPIO0、GPIO1、GPIO2、GPIO3
+// **			    PinNum:  GPIO_PIN_0~GPIO_PIN_7 (0~7)		 
+// ** \return  0：无中断产生
+// **			 1：有中断产生
+// ** \note  
+// **  (1)P0的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_5
+// **  (2)P1的PinNum输入值范围：GPIO_PIN_3~GPIO_PIN_7
+// **  (3)P2的PinNum输入值范围：GPIO_PIN_1~GPIO_PIN_6
+// **  (4)P3的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_2、GPIO_PIN_5、GPIO_PIN_6
+// ******************************************************************************/
+//uint8_t  GPIO_GetIntFlag(uint8_t Port, uint8_t PinNum)
+//{
+//	uint8_t PinIntFlag = 0;
+//	switch(Port)
+//	{
+//		case GPIO0:
+//			PinIntFlag = P0EXTIF & (1<<PinNum);
+//			break;
+//		case GPIO1:
+//			PinIntFlag = P1EXTIF & (1<<PinNum);
+//			break;		
+//		case GPIO2:
+//			PinIntFlag = P2EXTIF & (1<<PinNum);
+//			break;	
+//		case GPIO3:
+//			PinIntFlag = P3EXTIF & (1<<PinNum);
+//			break;
+//		default:
+//			break;	
+//	}
+//	return( (PinIntFlag)? 1:0);
+//}
+// /********************************************************************************
+// ** \brief	 GPIO_ClearIntFlag
+// **			清除中断标志位
+// ** \param [in] Port  ： GPIO0、GPIO1、GPIO2、GPIO3
+// **			    PinNum:  GPIO_PIN_0~GPIO_PIN_7 (0~7)		 
+// ** \return  none
+// ** \note  
+// **  (1)P0的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_5
+// **  (2)P1的PinNum输入值范围：GPIO_PIN_3~GPIO_PIN_7
+// **  (3)P2的PinNum输入值范围：GPIO_PIN_1~GPIO_PIN_6
+// **  (4)P3的PinNum输入值范围：GPIO_PIN_0~GPIO_PIN_2、GPIO_PIN_5、GPIO_PIN_6   
+// ******************************************************************************/
+//void GPIO_ClearIntFlag(uint8_t Port, uint8_t PinNum)
+//{
+//	switch(Port)
+//	{
+//		case GPIO0:
+//			P0EXTIF = 0xff &(~(1<<PinNum));
+//			break;
+//		case GPIO1:
+//			P1EXTIF = 0xff &(~(1<<PinNum));			
+//			break;		
+//		case GPIO2:
+//			P2EXTIF = 0xff &(~(1<<PinNum));
+//			break;	
+//		case GPIO3:
+//			P3EXTIF = 0xff &(~(1<<PinNum));
+//			break;
+//		default:
+//			break;	
+//	}
+//}

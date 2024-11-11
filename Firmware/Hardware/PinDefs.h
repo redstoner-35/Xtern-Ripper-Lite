@@ -45,6 +45,11 @@
 #define NTCENIOG 3
 #define NTCENIOx GPIO_PIN_0
 
+//电池节数设置引脚(P2.2)
+#define BATTSELIOP GPIO_PORT_2
+#define BATTSELIOG 2
+#define BATTSELIOx GPIO_PIN_2
+
 
 //红色指示灯(P2.4)	
 #define RedLEDIOP GPIO_PORT_2
@@ -57,7 +62,6 @@
 #define GreenLEDIOx GPIO_PIN_5
 
 //侧按按键(P2.3)
-#define SideKeyVector P2EI_VECTOR  //因为侧按按键使用到了GPIO中断，需要告诉代码按键引脚对应的IO中断向量
 #define SideKeyGPIOP GPIO_PORT_2
 #define SideKeyGPIOG 2
 #define SideKeyGPIOx GPIO_PIN_3

@@ -1,8 +1,0 @@
-Change Component DesignItemId : Designator=R19 Old DesignItemId=0402 10K次 (1002) 1% New DesignItemId=0402 1.5K次 (1501) 1%
-Change Component DesignItemId : Designator=R14 Old DesignItemId=0402 10K次 (1002) 1% New DesignItemId=0402 470次 (4700) 1%
-Change Component DesignItemId : Designator=R17 Old DesignItemId=0402 10K次 (1002) 1% New DesignItemId=0402 470次 (4700) 1%
-Change Component Comment : Designator=R12 Old Comment=1M次 (1004) ㊣1% New Comment=7.5M次 (7504) ㊣1%
-Change Component Comment : Designator=R19 Old Comment=10K次 (1002) ㊣1% New Comment=1.5K次 (1501) ㊣1%
-Change Component Comment : Designator=R14 Old Comment=10K次 (1002) ㊣1% New Comment=470次 (4700) ㊣1%
-Change Component Comment : Designator=R17 Old Comment=10K次 (1002) ㊣1% New Comment=470次 (4700) ㊣1%
-Change Component Comment : Designator=C13 Old Comment=100nF (104) 10% 16V New Comment=68nF (683) 10% 50V

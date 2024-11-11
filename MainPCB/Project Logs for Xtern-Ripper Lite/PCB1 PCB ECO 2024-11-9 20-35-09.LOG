@@ -1,7 +1,0 @@
-Removed Pin From Net: NetName=12V Pin=R15-1
-Removed Pin From Net: NetName=VLDO Pin=R15-2
-Removed Member From Class: ClassName=main Member=R15
-Added Component: Designator=FB1(0402_L)
-Added Pin To Net: NetName=12V Pin=FB1-1
-Added Pin To Net: NetName=VLDO Pin=FB1-2
-Added Member To Class: ClassName=main Member=Component FB1 EBMS100505A050

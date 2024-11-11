@@ -67,12 +67,9 @@ void main()
 	}
 
 //GPIO2中断回调处理函数
-void Key_IRQHandler(void)  interrupt SideKeyVector 
+void Key_IRQHandler(void)  interrupt P2EI_VECTOR 
   {
 	//侧按中断触发，响应中断
-	if(GPIO_GetIntFlag(SideKeyGPIOG,SideKeyGPIOx))
-		{
-		SideKey_Int_Callback();  //进行按键响应
-		GPIO_ClearIntFlag(SideKeyGPIOG,SideKeyGPIOx); //清除Flag
-		}
+	SideKey_Int_Callback();  //进行按键响应
+  P2EXTIF=0;
 	}

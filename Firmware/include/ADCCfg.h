@@ -8,7 +8,7 @@ typedef struct
 	{
   char Systemp; //系统温度
 	float OutputVoltage; //DCDC输出电压(V)
-	float BatteryVoltage; //电池电压(V)
+	float BatteryVoltage; //等效单节电池电压(V)
 	float RawBattVolt; //原始的电池电压(V)
 	float MCUVDD; //单片机的VDD
 	bool IsNTCOK; //NTC是否OK
@@ -42,7 +42,6 @@ typedef struct
 
 //电池检测配置
 #define VBattAvgCount 300 //等效单节电池电压数据的平均次数(用于内部逻辑的低压保护,电量显示和电量不足跳档)
-#define VbattCellCount 3 //电池节数
 
 //绝对值宏
 #define fabs(x) x>0?x:x*-1  //浮点求绝对值

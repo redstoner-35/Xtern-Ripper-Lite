@@ -72,6 +72,7 @@ static void ADC_WriteOutputBuf(int ADCResult,char Ch)
 	{
 	float Buf,Rt,Vadc;
 	unsigned long NTCRES;
+	extern xdata char VbattCellCount;	
 	//进行ADC
 	Rt=ADC_IsUsingIVREF()?ADCVREF:Data.MCUVDD; //根据基准设置得到AD当前的基准电压
 	Vadc=(float)ADCResult*(Rt/(float)4096);//将AD值转换为原始电压

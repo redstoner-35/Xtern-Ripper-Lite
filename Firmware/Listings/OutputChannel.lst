@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/09/2024 20:20:23 PAGE 1   
+C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/11/2024 12:34:04 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE OUTPUTCHANNEL
@@ -27,177 +27,190 @@ line level    source
   17          //ƒ⁄≤ø±‰¡ø
   18          xdata int Current; //ƒø±ÍµÁ¡˜(mA)
   19          static xdata int CurrentBuf;
-  20          
-  21          //≥ı ºªØ∫Ø ˝
-  22          void OutputChannel_Init(void)
-  23            {
-  24   1        GPIOCfgDef OCInitCfg;
-  25   1        //…Ë÷√Ω·ππÃÂ
-  26   1        OCInitCfg.Mode=GPIO_Out_PP;
-  27   1        OCInitCfg.Slew=GPIO_Fast_Slew;    
-  28   1        OCInitCfg.DRVCurrent=GPIO_High_Current; //Õ∆MOSFET,–Ë“™∏ﬂ…œ…˝–±¬ 
-  29   1        //≥ı ºªØbit
-  30   1        RevPGate=0;
-  31   1        DCDCEN=0;
-  32   1        LShuntSEL=0;
-  33   1        HShuntSEL=0;
-  34   1        //ø™ º≈‰÷√IO  
-  35   1        GPIO_ConfigGPIOMode(RevProtIOG,GPIOMask(RevProtIOx),&OCInitCfg);  
-  36   1        GPIO_ConfigGPIOMode(DCDCENIOG,GPIOMask(DCDCENIOx),&OCInitCfg);    
-  37   1        GPIO_ConfigGPIOMode(LShuntSelIOG,GPIOMask(LShuntSelIOx),&OCInitCfg);    
-  38   1        GPIO_ConfigGPIOMode(HShuntSelIOG,GPIOMask(HShuntSelIOx),&OCInitCfg);      
-  39   1        //œµÕ≥…œµÁ ±µÁ¡˜≈‰÷√Œ™0
-  40   1        Current=0;
-  41   1        CurrentBuf=0;
-  42   1        }
-  43          
-  44          // ‰≥ˆÕ®µ¿≤‚ ‘‘À––
-  45          void OutputChannel_TestRun(void)
-  46            {
-  47   1        int retry=64,i;
-  48   1        xdata float LastOutput[5]={0};
-  49   1        float buf,Err;
-  50   1        //ºÏ≤È «∑Ò”…ø¥√≈π∑µº÷¬∏¥Œª  
-  51   1        if(GetIfWDogCauseRST()) 
-  52   1          {
-  53   2          ErrCode=Fault_MPUHang; //÷∏ æπ ’œ”…µ•∆¨ª˙À¿ª˙µº÷¬
-  54   2          if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //÷∏ æπ ’œ∑¢…˙
-C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/09/2024 20:20:23 PAGE 2   
+  20          static xdata char IsEnableDCDCCounter=0; //—” ±∆Ù”√DCDCµƒº∆ ±∆˜
+  21          
+  22          //≥ı ºªØ∫Ø ˝
+  23          void OutputChannel_Init(void)
+  24            {
+  25   1        GPIOCfgDef OCInitCfg;
+  26   1        //…Ë÷√Ω·ππÃÂ
+  27   1        OCInitCfg.Mode=GPIO_Out_PP;
+  28   1        OCInitCfg.Slew=GPIO_Fast_Slew;    
+  29   1        OCInitCfg.DRVCurrent=GPIO_High_Current; //Õ∆MOSFET,–Ë“™∏ﬂ…œ…˝–±¬ 
+  30   1        //≥ı ºªØbit
+  31   1        RevPGate=0;
+  32   1        DCDCEN=0;
+  33   1        LShuntSEL=0;
+  34   1        HShuntSEL=0;
+  35   1        //ø™ º≈‰÷√IO  
+  36   1        GPIO_ConfigGPIOMode(RevProtIOG,GPIOMask(RevProtIOx),&OCInitCfg);  
+  37   1        GPIO_ConfigGPIOMode(DCDCENIOG,GPIOMask(DCDCENIOx),&OCInitCfg);    
+  38   1        GPIO_ConfigGPIOMode(LShuntSelIOG,GPIOMask(LShuntSelIOx),&OCInitCfg);    
+  39   1        GPIO_ConfigGPIOMode(HShuntSelIOG,GPIOMask(HShuntSelIOx),&OCInitCfg);      
+  40   1        //œµÕ≥…œµÁ ±µÁ¡˜≈‰÷√Œ™0
+  41   1        Current=0;
+  42   1        CurrentBuf=0;
+  43   1        }
+  44          
+  45          // ‰≥ˆÕ®µ¿≤‚ ‘‘À––
+  46          void OutputChannel_TestRun(void)
+  47            {
+  48   1        int retry=64,i;
+  49   1        xdata float LastOutput[5]={0};
+  50   1        xdata float buf,Err;
+  51   1        //ºÏ≤È «∑Ò”…ø¥√≈π∑µº÷¬∏¥Œª  
+  52   1        if(GetIfWDogCauseRST()) 
+  53   1          {
+  54   2          ErrCode=Fault_MPUHang; //÷∏ æπ ’œ”…µ•∆¨ª˙À¿ª˙µº÷¬
+C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/11/2024 12:34:04 PAGE 2   
 
-  55   2          return;
-  56   2          }
-  57   1        //◊º±∏∆Ù∂Ø ‰≥ˆ
-  58   1        if(Data.RawBattVolt<5.5)return; // ‰»ÎµÁ—ππ˝µÕ±‹√‚ŒÛ±®£¨Ã¯π˝ºÏ≤‚
-  59   1        LShuntSEL=0;
-  60   1        HShuntSEL=0;
-  61   1        RevPGate=0; //πÿ±’∑¿∑¥Ω”ºÏ≤‚PIN
-  62   1        PWM_ForceSetDuty(1); //¥Úø™PWMDAC ‰≥ˆ“ª∏ˆ≥ı÷µ   
-  63   1        DCDCEN=1; //¡ÓDCDCEN=1
-  64   1        //µ»¥˝DCDC∆Ù∂Ø  
-  65   1        do
-  66   1          {
-  67   2          delay_ms(5);
-  68   2          SystemTelemHandler();
-  69   2          if(Data.OutputVoltage>7.1)break; // ‰≥ˆµÁ—π’˝≥£
-  70   2          retry--;
-  71   2          }
-  72   1        while(retry>0);
-  73   1        //DCDC∆Ù∂Ø ß∞‹
-  74   1        if(retry==0)
-  75   1          {
-  76   2          DCDCEN=0; //¡ÓDCDCEN=0
-  77   2          ErrCode=Fault_DCDCFailedToStart;
-  78   2          if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //÷∏ æπ ’œ∑¢…˙
-  79   2          return;
-  80   2          }
-  81   1        //Ω¯–– ‰≥ˆENøÿ÷∆µƒºÏ≤‚
-  82   1        retry=100; //∏¥Œª—” ±µ»¥˝
-  83   1        DCDCEN=0; //¡ÓDCDCEN=0
-  84   1        delay_ms(20); //—”≥Ÿ20ms
-  85   1        PWM_ForceSetDuty(0); //πÿ±’PWMDAC
-  86   1        do
-  87   1          {
-  88   2          SystemTelemHandler();
-  89   2          delay_ms(10);
-  90   2          //∏¸–¬ ˝æ›
-  91   2          for(i=4;i>0;i--)LastOutput[i]=LastOutput[i-1];  
-  92   2          LastOutput[0]=Data.OutputVoltage;
-  93   2          //«Û∆Ωæ˘  
-  94   2          buf=0;
-  95   2          for(i=0;i<5;i++)buf+=LastOutput[i];
-  96   2          buf/=(float)5;      
-  97   2          //«Û ˝æ›¿Ô√Ê√ø◊È ˝æ›µƒ≤Óæ‡
-  98   2          Err=0;  
-  99   2          for(i=0;i<5;i++)Err+=fabs(buf-LastOutput[i]);
- 100   2          if(retry<93&&Err>0.5)break; // ‰≥ˆµÁ—π’˝≥£À•ºı÷–£¨µÙµÁ
- 101   2          retry--;
- 102   2          }
- 103   1        while(retry>0);
- 104   1        //DCDCÕ£÷π ß∞‹£¨EN≤ª ‹øÿ£¨±®¥Ì
- 105   1        if(retry==0)
- 106   1          {
- 107   2          ErrCode=Fault_DCDCENOOC;
- 108   2          if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //÷∏ æπ ’œ∑¢…˙
- 109   2          }
- 110   1        } 
- 111            
- 112          // ‰≥ˆÕ®µ¿Ω¯»Î–›√ﬂµƒ≤Ÿ◊˜
- 113          void OutputChannel_DeInit(void)
- 114            {
- 115   1        //∏¥ŒªµÁ¡˜ª∫≥Â∆˜
- 116   1        Current=0;
-C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/09/2024 20:20:23 PAGE 3   
+  55   2          if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //÷∏ æπ ’œ∑¢…˙
+  56   2          return;
+  57   2          }
+  58   1        //◊º±∏∆Ù∂Ø ‰≥ˆ
+  59   1        if(Data.RawBattVolt<5.5)return; // ‰»ÎµÁ—ππ˝µÕ±‹√‚ŒÛ±®£¨Ã¯π˝ºÏ≤‚
+  60   1        LShuntSEL=0;
+  61   1        HShuntSEL=0;
+  62   1        RevPGate=0; //πÿ±’∑¿∑¥Ω”ºÏ≤‚PIN
+  63   1        PWM_ForceSetDuty(1); //¥Úø™PWMDAC ‰≥ˆ“ª∏ˆ≥ı÷µ   
+  64   1        DCDCEN=1; //¡ÓDCDCEN=1
+  65   1        //µ»¥˝DCDC∆Ù∂Ø  
+  66   1        do
+  67   1          {
+  68   2          delay_ms(5);
+  69   2          SystemTelemHandler();
+  70   2          if(Data.OutputVoltage>7.1)break; // ‰≥ˆµÁ—π’˝≥£
+  71   2          retry--;
+  72   2          }
+  73   1        while(retry>0);
+  74   1        //DCDC∆Ù∂Ø ß∞‹
+  75   1        if(retry==0)
+  76   1          {
+  77   2          DCDCEN=0; //¡ÓDCDCEN=0
+  78   2          ErrCode=Fault_DCDCFailedToStart;
+  79   2          if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //÷∏ æπ ’œ∑¢…˙
+  80   2          return;
+  81   2          }
+  82   1        //Ω¯–– ‰≥ˆENøÿ÷∆µƒºÏ≤‚
+  83   1        retry=100; //∏¥Œª—” ±µ»¥˝
+  84   1        DCDCEN=0; //¡ÓDCDCEN=0
+  85   1        delay_ms(20); //—”≥Ÿ20ms
+  86   1        PWM_ForceSetDuty(0); //πÿ±’PWMDAC
+  87   1        do
+  88   1          {
+  89   2          SystemTelemHandler();
+  90   2          delay_ms(10);
+  91   2          //∏¸–¬ ˝æ›
+  92   2          for(i=4;i>0;i--)LastOutput[i]=LastOutput[i-1];  
+  93   2          LastOutput[0]=Data.OutputVoltage;
+  94   2          //«Û∆Ωæ˘  
+  95   2          buf=0;
+  96   2          for(i=0;i<5;i++)buf+=LastOutput[i];
+  97   2          buf/=(float)5;      
+  98   2          //«Û ˝æ›¿Ô√Ê√ø◊È ˝æ›µƒ≤Óæ‡
+  99   2          Err=0;  
+ 100   2          for(i=0;i<5;i++)Err+=fabs(buf-LastOutput[i]);
+ 101   2          if(retry<93&&Err>0.5)break; // ‰≥ˆµÁ—π’˝≥£À•ºı÷–£¨µÙµÁ
+ 102   2          retry--;
+ 103   2          }
+ 104   1        while(retry>0);
+ 105   1        //DCDCÕ£÷π ß∞‹£¨EN≤ª ‹øÿ£¨±®¥Ì
+ 106   1        if(retry==0)
+ 107   1          {
+ 108   2          ErrCode=Fault_DCDCENOOC;
+ 109   2          if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //÷∏ æπ ’œ∑¢…˙
+ 110   2          }
+ 111   1        } 
+ 112            
+ 113          // ‰≥ˆÕ®µ¿Ω¯»Î–›√ﬂµƒ≤Ÿ◊˜
+ 114          void OutputChannel_DeInit(void)
+ 115            {
+ 116   1        //∏¥ŒªµÁ¡˜ª∫≥Â∆˜
+C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/11/2024 12:34:04 PAGE 3   
 
- 117   1        CurrentBuf=0;
- 118   1        //πÿ±’À˘”– ‰≥ˆ
- 119   1        RevPGate=0;
- 120   1        DCDCEN=0;
- 121   1        LShuntSEL=0;
- 122   1        HShuntSEL=0;  
- 123   1        }
- 124            
- 125          //ƒ⁄≤ø”√”⁄º∆À„PWMDAC’ºø’±»µƒ∫Ø ˝  
- 126          static float Duty_Calc(float ShuntmOhm,int Current,float Offset)
- 127            {
- 128   1        float buf;
- 129   1        buf=((float)Current*Offset)*ShuntmOhm; // ‰»Î¥´Ω¯¿¥µƒµÁ¡˜(mA)≤¢≥À“‘ºÏ¡˜µÁ◊Ë◊Ë÷µ(mR)µ√µΩ‘À∑≈∂À’˚∂®µÁ—π(uV)
- 130   1        buf/=(float)1000; //uV◊™mV
- 131   1        buf/=((float)VdivDownResK/(float)(VdivUpResK+VdivDownResK+PWMDACResK)); //Ω´‘À∑≈∂À’˚∂®µÁ—π≥˝“‘µÁ◊Ëµƒ∑÷—π±
+ 117   1        Current=0;
+ 118   1        CurrentBuf=0;
+ 119   1        //πÿ±’À˘”– ‰≥ˆ
+ 120   1        RevPGate=0;
+ 121   1        DCDCEN=0;
+ 122   1        LShuntSEL=0;
+ 123   1        HShuntSEL=0;  
+ 124   1        }
+ 125            
+ 126          //ƒ⁄≤ø”√”⁄º∆À„PWMDAC’ºø’±»µƒ∫Ø ˝  
+ 127          static float Duty_Calc(float ShuntmOhm,int Current,float Offset)
+ 128            {
+ 129   1        float buf;
+ 130   1        buf=(float)Current*ShuntmOhm; // ‰»Î¥´Ω¯¿¥µƒµÁ¡˜(mA)≤¢≥À“‘ºÏ¡˜µÁ◊Ë◊Ë÷µ(mR)µ√µΩ‘À∑≈∂À’˚∂®µÁ—π(uV)
+ 131   1        buf/=(float)1000; //uV◊™mV
+ 132   1        buf/=((float)VdivDownResK/(float)(VdivUpResK+VdivDownResK+PWMDACResK)); //Ω´‘À∑≈∂À’˚∂®µÁ—π≥˝“‘µÁ◊Ëµƒ∑÷—π±
              -»¿˝µ√µΩDAC∂ÀµƒµÁ—π
- 132   1        buf/=Data.MCUVDD*(float)1000; //º∆À„≥ˆƒø±ÍDAC ‰≥ˆµÁ—π∫ÕPWMDACª∫≥Â∆˜π©µÁµÁ—π(MCUVDD)÷Æº‰µƒ±»÷µ
- 133   1        buf*=100; //◊™ªªŒ™∞Ÿ∑÷±»
- 134   1        //Ω¯––œﬁ∑˘∫ÕΩ·π˚ ‰≥ˆ  
- 135   1        if(buf>100)buf=100;
- 136   1        if(buf<0)buf=0;
- 137   1        return buf;
- 138   1        }
- 139            
- 140          // ‰≥ˆÕ®µ¿º∆À„
- 141          void OutputChannel_Calc(void)
- 142            {
- 143   1        //±‹√‚Œﬁ–ßµƒ÷ÿ∏¥º∆À„
- 144   1        if(CurrentBuf==Current)return;
- 145   1        CurrentBuf=Current;
- 146   1        //µÁ¡˜–°”⁄µ»”⁄0£¨πÿ±’À˘”– ‰≥ˆ
- 147   1        if(CurrentBuf<=0)
- 148   1          {
- 149   2          PWMDuty=0;
- 150   2          RevPGate=CurrentBuf==-1?1:0;
- 151   2          DCDCEN=0;
- 152   2          LShuntSEL=0;
- 153   2          HShuntSEL=0;
- 154   2          }
- 155   1        // π”√∏®÷˙Õ®µ¿
- 156   1        else if(CurrentBuf<AUXChannelImax)
- 157   1          {
- 158   2          PWMDuty=Duty_Calc(AUXChannelShuntmOhm,CurrentBuf,LowShuntIOffset);
- 159   2          RevPGate=Data.MCUVDD<9.5?1:0;   //µÕ ‰≥ˆµÁ¡˜«“ ‰»Îπ¶¬ ≤ª¥Û ±œ¬πÿ±’∑¿∑¥Ω”FETΩ⁄ °ƒ‹¡ø
- 160   2          DCDCEN=1;
- 161   2          LShuntSEL=1;  
- 162   2          HShuntSEL=0;  //∆Ù∂ØDCDC£¨—°‘ÒµÕ¡ø≥ÃÕ®µ¿
- 163   2          }
- 164   1        //µÁ¡˜¥Û”⁄∏®÷˙Õ®µ¿…œœﬁ£¨ π”√÷˜Õ®µ¿
- 165   1        else
- 166   1          {
- 167   2          PWMDuty=Duty_Calc(MainChannelShuntmOhm,CurrentBuf,HighShuntIOffset);
- 168   2          RevPGate=1;   //÷˜ ‰≥ˆ∆Ù”√£¨¥Úø™∑¿∑¥Ω”FETÃ·∏ﬂƒ‹–ß
- 169   2          DCDCEN=1;
- 170   2          LShuntSEL=0;  
- 171   2          HShuntSEL=1;  //∆Ù∂ØDCDC£¨—°‘Ò∏ﬂ¡ø≥ÃÕ®µ¿
- 172   2          } 
- 173   1        //PWM’ºø’±»∑¢…˙±‰∏¸£¨∏¸–¬ ‰≥ˆ
- 174   1        IsNeedToUploadPWM=1;
- 175   1        }
+ 133   1        buf*=Offset; //≥À“‘Ω√’˝œµ ˝–ﬁ’˝µÁ¡˜
+ 134   1        buf/=Data.MCUVDD*(float)1000; //º∆À„≥ˆƒø±ÍDAC ‰≥ˆµÁ—π∫ÕPWMDACª∫≥Â∆˜π©µÁµÁ—π(MCUVDD)÷Æº‰µƒ±»÷µ
+ 135   1        buf*=100; //◊™ªªŒ™∞Ÿ∑÷±»
+ 136   1        //Ω¯––œﬁ∑˘∫ÕΩ·π˚ ‰≥ˆ  
+ 137   1        if(buf>100)buf=100;
+ 138   1        if(buf<0)buf=0;
+ 139   1        return buf;
+ 140   1        }
+ 141            
+ 142          // ‰≥ˆÕ®µ¿º∆À„
+ 143          void OutputChannel_Calc(void)
+ 144            {
+ 145   1        //—” ±∆Ù”√DCDC  
+ 146   1        if(IsEnableDCDCCounter&&!IsNeedToUploadPWM) 
+ 147   1          {
+ 148   2          IsEnableDCDCCounter--;
+ 149   2          if(!IsEnableDCDCCounter)DCDCEN=1; // ±º‰µΩ£¨¥Úø™DCDC
+ 150   2          }
+ 151   1        //±‹√‚Œﬁ–ßµƒ÷ÿ∏¥º∆À„
+ 152   1        if(CurrentBuf==Current)return;
+ 153   1        CurrentBuf=Current;
+ 154   1        //µÁ¡˜–°”⁄µ»”⁄0£¨πÿ±’À˘”– ‰≥ˆ
+ 155   1        if(CurrentBuf<=0)
+ 156   1          {
+ 157   2          if(CurrentMode->ModeIdx!=Mode_Strobe) //∑«±¨…¡ƒ£ Ωœ¬«Â¡„PWMDACª˘◊º ‰≥ˆ
+ 158   2            {
+ 159   3            PWMDuty=0;
+ 160   3            IsNeedToUploadPWM=1;
+ 161   3            }
+ 162   2          RevPGate=CurrentBuf==-1?1:0;
+ 163   2          DCDCEN=0;
+ 164   2          LShuntSEL=0;
+ 165   2          HShuntSEL=0;
+ 166   2          }
+ 167   1        // π”√∏®÷˙Õ®µ¿
+ 168   1        else if(CurrentBuf<AUXChannelImax)
+ 169   1          {
+ 170   2          PWMDuty=Duty_Calc(AUXChannelShuntmOhm,CurrentBuf,LowShuntIOffset);
+ 171   2          RevPGate=Data.RawBattVolt<9.5?1:0;   //µÕ ‰≥ˆµÁ¡˜«“ ‰»Îπ¶¬ ≤ª¥Û ±œ¬πÿ±’∑¿∑¥Ω”FETΩ⁄ °ƒ‹¡ø
+ 172   2          if(!DCDCEN)IsEnableDCDCCounter=PWMDACSettleDelay; //»Áπ˚µ±«∞DCDC «πÿ±’◊¥Ã¨‘Ú—” ±“ª∂Œ ±º‰‘Ÿ¥Úø™
+ 173   2          LShuntSEL=1;  
+ 174   2          HShuntSEL=0;  //∆Ù∂ØDCDC£¨—°‘ÒµÕ¡ø≥ÃÕ®µ¿
+ 175   2          IsNeedToUploadPWM=1; //–Ë“™∏¸–¬PWM ‰≥ˆ
+ 176   2          }
+ 177   1        //µÁ¡˜¥Û”⁄∏®÷˙Õ®µ¿…œœﬁ£¨ π”√÷˜Õ®µ¿
+C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/11/2024 12:34:04 PAGE 4   
 
+ 178   1        else
+ 179   1          {
+ 180   2          PWMDuty=Duty_Calc(MainChannelShuntmOhm,CurrentBuf,HighShuntIOffset);
+ 181   2          RevPGate=1;   //÷˜ ‰≥ˆ∆Ù”√£¨¥Úø™∑¿∑¥Ω”FETÃ·∏ﬂƒ‹–ß
+ 182   2          if(CurrentMode->ModeIdx==Mode_Strobe)DCDCEN=1; //±¨…¡ƒ£ Ω–Ë“™∫‹øÏµƒœÏ”¶ÀŸ∂»À˘“‘÷±Ω”¥Úø™DCDC
+ 183   2          else if(!DCDCEN)IsEnableDCDCCounter=PWMDACSettleDelay; //∆‰”‡µ≤Œª‘Ú—” ±“ª∂Œ ±º‰‘Ÿ¥Úø™
+ 184   2          LShuntSEL=0;  
+ 185   2          HShuntSEL=1;  //∆Ù∂ØDCDC£¨—°‘Ò∏ﬂ¡ø≥ÃÕ®µ¿
+ 186   2          IsNeedToUploadPWM=1; //–Ë“™∏¸–¬PWM ‰≥ˆ
+ 187   2          }
+ 188   1        }
 
-C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/09/2024 20:20:23 PAGE 4   
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =   1136    ----
+   CODE SIZE        =   1186    ----
    CONSTANT SIZE    =     20    ----
-   XDATA SIZE       =      4      20
+   XDATA SIZE       =      5      28
    PDATA SIZE       =   ----    ----
-   DATA SIZE        =   ----      29
+   DATA SIZE        =   ----      21
    IDATA SIZE       =   ----    ----
    BIT SIZE         =   ----    ----
    EDATA SIZE       =   ----    ----

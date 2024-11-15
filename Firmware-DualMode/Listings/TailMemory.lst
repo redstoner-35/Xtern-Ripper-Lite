@@ -1,0 +1,88 @@
+C51 COMPILER V9.60.0.0   TAILMEMORY                                                        11/15/2024 17:07:36 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE TAILMEMORY
+OBJECT MODULE PLACED IN .\Objects\TailMemory.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Logic\TailMemory.c OMF2 OPTIMIZE(9,SPEED) BROWSE INCDIR(.\include;.\StdD
+                    -river\inc;.\Hardware) DEBUG PRINT(.\Listings\TailMemory.lst) TABS(2) OBJECT(.\Objects\TailMemory.obj)
+
+line level    source
+
+   1          #include "ModeControl.h"
+   2          #include "Flash.h"
+   3          #include "TailKey.h"
+   4          
+   5          //ÉÏµçÊ±½øÐÐÎ²²¿°´¼ü¼ÇÒäµÄrecall
+   6          void TailMemory_Recall(void)
+   7            {
+   8   1        int i;
+   9   1        char buf;
+  10   1        ModeIdxDef ModeBuf=Mode_OFF;
+  11   1        //¶ÁÈ¡EEPROMÕÒµ½×îÐÂµÄ¼ÇÒä½á¹û
+  12   1        SetFlashState(1);
+  13   1        for(i=512;i<1020;i++)
+  14   1          {
+  15   2          Flash_Operation(Flash_Read,i,&buf);
+  16   2          if(buf<1||buf>11)break; //ÕÒµ½¿ÕµÄµØ·½
+  17   2          else ModeBuf=(ModeIdxDef)(buf-1); //µ±Ç°»¹Î´µÖ´ï×îºóÒ»¸öÄ£Ê½    
+  18   2          }
+  19   1        if(ModeBuf==Mode_Turbo||ModeBuf==Mode_Strobe||ModeBuf==Mode_SOS)ModeBuf=Mode_Low; //ÕÒÁËÀÏ°ëÌì¶¼Ã»ÕÒµ½ºÏÊ
+             -ÊµÄ
+  20   1        SwitchToGear(ModeBuf); //»Ö¸´µ½ÉÏ¸öµ²Î»
+  21   1        SetFlashState(0); //¹Ø±ÕÖÐ¶Ï
+  22   1        }
+  23          
+  24          //Êý¾ÝÇø±£´æ
+  25          void TailMemory_Save(ModeIdxDef Mode)
+  26            {
+  27   1        int i;
+  28   1        char LastMode,buf;
+  29   1        //ÅÐ¶Ï´«ÈëµÄÄ£Ê½ÖµÊÇ·ñÓÐ²»ÔÊÐí¼ÇÒäµÄ  
+  30   1        if(Mode==Mode_Fault)return;
+  31   1        //½øÐÐ±éÀú¶ÁÈ¡
+  32   1        SetFlashState(1);
+  33   1        for(i=512;i<1020;i++)
+  34   1          {
+  35   2          Flash_Operation(Flash_Read,i,&buf);
+  36   2          if(buf<1||buf>11)break; //ÕÒµ½¿ÕµÄµØ·½
+  37   2          else LastMode=buf-1; //µ±Ç°»¹Î´µÖ´ï×îºóÒ»¸öÄ£Ê½   
+  38   2          }
+  39   1        //±È¶ÔÊý¾Ý
+  40   1        if(Mode==Mode_Turbo||Mode==Mode_Strobe||Mode==Mode_SOS||Mode==Mode_Moon)Mode=LastMode; //¼«ÁÁ±¬ÉÁºÍSOS²»¼
+             -ÇÒä¡£Ê¹ÓÃ½øÈëÖ®Ç°µÄµ²Î»
+  41   1        if(LastMode==(unsigned char)Mode) //µ±Ç°Ä£Ê½¼ÇÒäÄ£¿éÀïÃæÊý¾ÝºÍÄ¿±êÒªÐ´ÈëµÄÊý¾ÝÏàÍ¬
+  42   1          {
+  43   2          SetFlashState(0);
+  44   2          return;
+  45   2          }
+  46   1        //´æ´¢ÇøÒÑ¾­Ð´ÂúÁË£¬²Á³ý
+  47   1        if(i==1020)
+  48   1          {
+  49   2          i=512; //»Øµ½´æ´¢½á¹¹µÄÍ·²¿¿ªÊ¼Ð´Èë
+  50   2          Flash_Operation(Flash_Erase,i,&buf);
+  51   2          }
+  52   1        //¿ªÊ¼Ð´ÈëÊý¾Ý
+C51 COMPILER V9.60.0.0   TAILMEMORY                                                        11/15/2024 17:07:36 PAGE 2   
+
+  53   1        buf=((char)Mode)+1;
+  54   1        Flash_Operation(Flash_Write,i,&buf);
+  55   1        SetFlashState(0); //Ð´ÈëÍê±ÏËø×¡Flash
+  56   1        }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    275    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       9
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -16,5 +16,4 @@
 ".\Objects\RampConfig.obj",
 ".\Objects\SelfTest.obj" 
 TO ".\Objects\XRLite" 
-
-PRINT(".\Listings\XRLite.map")
+PRINT(".\Listings\XRLite.m51") RAMSIZE(256) 

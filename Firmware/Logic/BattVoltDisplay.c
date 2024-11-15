@@ -22,7 +22,7 @@ void DisplayErrorIDHandler(void);
 	
 //内部全局变量
 static xdata char BattShowTimer=0; //电池电量显示命令
-static xdata BattStatusDef BattState; //电池电量标记位
+xdata BattStatusDef BattState; //电池电量标记位
 static xdata AverageCalcDef BattVolt;	
 xdata float Battery; //等效单节电池电压
 xdata char VbattCellCount=3; //系统的电池节数
@@ -153,8 +153,9 @@ static void BatVshowFSM(void)
 //在启动时显示电池电压
 void DisplayVBattAtStart(void)
 	{
-	GPIOCfgDef CSInitCfg;
 	int i;
+	#ifdef EnableStrapConfig
+	GPIOCfgDef CSInitCfg;
 	//检测电池节数并刷新等效单节电池的电压
 	CSInitCfg.Mode=GPIO_IPU;
   CSInitCfg.Slew=GPIO_Slow_Slew;		
@@ -166,8 +167,11 @@ void DisplayVBattAtStart(void)
 	CSPin=0;	
 	CSInitCfg.Mode=GPIO_Out_PP;	
 	GPIO_ConfigGPIOMode(BATTSELIOG,GPIOMask(BATTSELIOx),&CSInitCfg); //检测完毕，配置为推挽输出	
-	SystemTelemHandler();
+	#else
+	VbattCellCount=ManualCellCount; //手动指定CELL数目，无视Strap配置
+	#endif
 	//提前更新电池电量状态
+	SystemTelemHandler();
 	if(Data.BatteryVoltage<2.9)BattState=Battery_VeryLow; //电池电压低于2.8，直接报告严重不足
 	else if(Data.BatteryVoltage<3.2)BattState=Battery_Low; //电池电压低于3.2则切换到电量低的状态
 	else if(Data.BatteryVoltage<3.6)BattState=Battery_Mid; //电池电量低于3.5则表示为中等
@@ -249,8 +253,9 @@ void BatteryTelemHandler(void)
 		 }
 	else //正常进行警报
 		 {
-		 AlertThr=(float)(CurrentMode->LowVoltThres)/(float)1000; //从当前目标挡位读取模式值  
-		 if((Data.OutputVoltage/Data.RawBattVolt)>0.86)IsBatteryAlert=1; //输出输入比值大于86%，DCDC芯片已经饱和，强制降档
+		 if(CurrentMode->ModeIdx==Mode_Ramp)AlertThr=(float)RampCfg.BattThres/(float)1000; //无极调光模式下，使用结构体内的动态阈值
+		 else AlertThr=(float)(CurrentMode->LowVoltThres)/(float)1000; //从当前目标挡位读取模式值  
+		 if((Data.OutputVoltage/Data.RawBattVolt)>0.87)IsBatteryAlert=1; //输出输入比值大于86%，DCDC芯片已经饱和，强制降档
 		 else IsBatteryAlert=Battery>AlertThr?0:1; //警报bit
 		 IsBatteryFault=Battery>2.7?0:1; //故障bit
 		 if(IsBatteryFault)IsBatteryAlert=0; //故障bit置起后强制清除警报bit

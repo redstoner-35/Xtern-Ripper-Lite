@@ -1,10 +1,10 @@
-C51 COMPILER V9.60.0.0   SELFTEST                                                          11/11/2024 12:20:38 PAGE 1   
+C51 COMPILER V9.60.0.0   SELFTEST                                                          11/15/2024 17:31:00 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE SELFTEST
 OBJECT MODULE PLACED IN .\Objects\SelfTest.obj
-COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Logic\SelfTest.c OMF2 OPTIMIZE(9,SPEED) BROWSE INCDIR(.\include;.\StdDri
-                    -ver\inc;.\Hardware) DEBUG PRINT(.\Listings\SelfTest.lst) TABS(2) OBJECT(.\Objects\SelfTest.obj)
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Logic\SelfTest.c OPTIMIZE(9,SPEED) BROWSE INCDIR(.\include;.\StdDriver\i
+                    -nc;.\Hardware) DEBUG OBJECTEXTEND PRINT(.\Listings\SelfTest.lst) TABS(2) OBJECT(.\Objects\SelfTest.obj)
 
 line level    source
 
@@ -62,7 +62,7 @@ line level    source
   52   2          InputDetectTIM++;
   53   2          if((VBattBeforeTurbo-Data.RawBattVolt)<3.2)return; //电池压降还算合理
   54   2          ErrCode=Fault_InputConnectFailed; //电池压降过高说明输入可能存在虚接，触发故障
-C51 COMPILER V9.60.0.0   SELFTEST                                                          11/11/2024 12:20:38 PAGE 2   
+C51 COMPILER V9.60.0.0   SELFTEST                                                          11/15/2024 17:31:00 PAGE 2   
 
   55   2          if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //指示故障发生
   56   2          }
@@ -99,17 +99,13 @@ line level    source
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    502    ----
+   CODE SIZE        =    504    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =      8    ----
    PDATA SIZE       =   ----    ----
    DATA SIZE        =   ----       1
    IDATA SIZE       =   ----    ----
    BIT SIZE         =   ----    ----
-   EDATA SIZE       =   ----    ----
-   HDATA SIZE       =   ----    ----
-   XDATA CONST SIZE =   ----    ----
-   FAR CONST SIZE   =   ----    ----
 END OF MODULE INFORMATION.
 
 

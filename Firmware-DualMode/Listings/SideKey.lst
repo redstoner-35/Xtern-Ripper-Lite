@@ -1,0 +1,246 @@
+C51 COMPILER V9.60.0.0   SIDEKEY                                                           11/15/2024 17:07:35 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE SIDEKEY
+OBJECT MODULE PLACED IN .\Objects\SideKey.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Hardware\SideKey.c OMF2 OPTIMIZE(9,SPEED) BROWSE INCDIR(.\include;.\StdD
+                    -river\inc;.\Hardware) DEBUG PRINT(.\Listings\SideKey.lst) TABS(2) OBJECT(.\Objects\SideKey.obj)
+
+line level    source
+
+   1          #include "delay.h"
+   2          #include "SideKey.h"
+   3          #include "GPIO.h"
+   4          #include "cms8s6990.h"
+   5          #include "PinDefs.h"
+   6          #include "ModeControl.h"
+   7          
+   8          //全局变量
+   9          sbit KeyPress=SideKeyGPIOP^SideKeyGPIOx; //侧按按键输入
+  10          static bit IsKeyPressed = 0; //按键是否按下
+  11          static unsigned char KeyTimer[2];//计时器0用于按键按下计时，计时器1用于连按检测计时
+  12          static KeyEventStrDef Keyevent; //按键事件
+  13          volatile int SleepTimer;
+  14          
+  15          //内部按键检测用的变量
+  16          xdata unsigned char KeyState;
+  17          
+  18          //初始化侧按键
+  19          void SideKeyInit(void)
+  20            {
+  21   1        GPIOCfgDef KeyInitCfg;
+  22   1        //设置结构体
+  23   1        KeyInitCfg.Mode=GPIO_IPU;
+  24   1        KeyInitCfg.Slew=GPIO_Slow_Slew;   
+  25   1        KeyInitCfg.DRVCurrent=GPIO_Low_Current; //配置为上拉输入
+  26   1        //按键输入初始化
+  27   1        GPIO_SetMUXMode(SideKeyGPIOG,SideKeyGPIOx,GPIO_AF_GPIO); //配置为GPIO      
+  28   1        GPIO_ConfigGPIOMode(SideKeyGPIOG,GPIOMask(SideKeyGPIOx),&KeyInitCfg);//按键输入
+  29   1        GPIO_EnableInt(SideKeyGPIOG,GPIOMask(SideKeyGPIOx)); //使能中断功能
+  30   1        GPIO_SetExtIntMode(SideKeyGPIOG,SideKeyGPIOx,GPIO_Int_Falling);//设置为下降沿触发
+  31   1        EIP1|=0x04; //将按键中断设置为高优先级
+  32   1        //初始化结构体内容和定时器
+  33   1        SleepTimer=SleepTimeOut*8;//复位定时器
+  34   1        KeyState=0xFF;
+  35   1        KeyTimer[0]=0x00;
+  36   1        KeyTimer[1]=0x00;
+  37   1        Keyevent.LongPressEvent=0;
+  38   1        Keyevent.ShortPressCount=0;
+  39   1        Keyevent.ShortPressEvent=0;
+  40   1        Keyevent.PressAndHoldEvent=0;
+  41   1        }
+  42            
+  43          //检测是否有事件发生
+  44          bit IsKeyEventOccurred(void)
+  45            {
+  46   1        if(Keyevent.LongPressEvent)return 1;
+  47   1        if(Keyevent.ShortPressEvent)return 1;
+  48   1        if(Keyevent.PressAndHoldEvent)return 1;
+  49   1        //什么也没有，退出不处理
+  50   1        return 0; 
+  51   1        } 
+  52          
+  53          //侧按按键计时模块
+  54          void SideKey_TIM_Callback(void)
+C51 COMPILER V9.60.0.0   SIDEKEY                                                           11/15/2024 17:07:35 PAGE 2   
+
+  55            {
+  56   1        unsigned char buf;
+  57   1        //定时器0（用于按键短按和长按计时）
+  58   1        if(KeyTimer[0]&0x80)
+  59   1          {
+  60   2          buf=KeyTimer[0]&0x7F;
+  61   2          if(buf<(unsigned char)LongPressTime)buf++;
+  62   2          KeyTimer[0]&=0x80;
+  63   2          KeyTimer[0]|=buf; //将数值取出来，加1再写回去
+  64   2          }
+  65   1        else KeyTimer[0]=0; //定时器关闭
+  66   1        //定时器1（用于按键连按检测）
+  67   1        if(KeyTimer[1]&0x80)
+  68   1          {
+  69   2          buf=KeyTimer[1]&0x7F;
+  70   2          if(buf<(unsigned char)ContShortPressWindow)buf++;
+  71   2          KeyTimer[1]&=0x80;
+  72   2          KeyTimer[1]|=buf; //将数值取出来，加1再写回去
+  73   2          }
+  74   1        else KeyTimer[1]=0; //定时器关闭
+  75   1        }
+  76          
+  77          //侧按GPIO中断回调处理
+  78          void SideKey_Int_Callback(void)
+  79            {
+  80   1        unsigned char time;
+  81   1        //开始响应
+  82   1        if(GPIO_GetExtIntMode(SideKeyGPIOG,SideKeyGPIOx)==GPIO_Int_Rising)
+  83   1          {
+  84   2          IsKeyPressed = 0;
+  85   2          time=KeyTimer[0]&0x7F;//从计时器取出按键按下时间
+  86   2          KeyTimer[0]=0;//复位并关闭定时器0
+  87   2          if(Keyevent.LongPressDetected||Keyevent.PressAndHoldEvent)//如果已经检测到长按事件则下面�
+             -�么都不做
+  88   2            {
+  89   3            Keyevent.PressAndHoldEvent=0;
+  90   3            Keyevent.LongPressDetected=0;//清除检测到的表示
+  91   3            }
+  92   2          else if(time<(unsigned char)LongPressTime)//短按事件发生      
+  93   2            {
+  94   3            if(Keyevent.ShortPressCount<10)Keyevent.ShortPressCount++;//累加有效的短按次数
+  95   3            KeyTimer[1]=0x80;//启动短按完毕等待统计的计时器
+  96   3            }     
+  97   2          }
+  98   1        //按键按下
+  99   1        else
+ 100   1          {
+ 101   2          IsKeyPressed = 1;//标记按键按下
+ 102   2          SleepTimer=8*SleepTimeOut; //睡眠时间延长
+ 103   2          if(KeyTimer[1]&0x80)KeyTimer[1]=0x80;//复位
+ 104   2          if(!(KeyTimer[0]&0x80))KeyTimer[0]=0x80;//启动计时
+ 105   2          }
+ 106   1        //禁止INT0中断
+ 107   1        GPIO_DisableInt(SideKeyGPIOG,GPIOMask(SideKeyGPIOx)); //禁止中断功能
+ 108   1        KeyState=0x0A; //复位检测模块
+ 109   1        }
+ 110          
+ 111          //标记按键按下
+ 112          void MarkAsKeyPressed(void)
+ 113            {
+ 114   1        //禁止INT0中断
+ 115   1        GPIO_DisableInt(SideKeyGPIOG,GPIOMask(SideKeyGPIOx)); //禁止中断功能
+C51 COMPILER V9.60.0.0   SIDEKEY                                                           11/15/2024 17:07:35 PAGE 3   
+
+ 116   1        KeyState=0xAA; //复位检测模块
+ 117   1        //标记按键已被按下
+ 118   1        IsKeyPressed = 1;//标记按键按下
+ 119   1        if(KeyTimer[1]&0x80)KeyTimer[1]=0x80;//复位
+ 120   1        if(!(KeyTimer[0]&0x80))KeyTimer[0]=0x80;//启动计时
+ 121   1        }   
+ 122            
+ 123          //在单击双击三击+长按触发的时候清除单击事件的记录
+ 124          static void ClickAndHoldEventHandler(int PressCount)
+ 125            {
+ 126   1        KeyTimer[1]=0; //关闭后部检测定时器
+ 127   1        Keyevent.ShortPressEvent=0;
+ 128   1        Keyevent.ShortPressCount=0; //短按次数为0
+ 129   1        Keyevent.LongPressDetected=0;
+ 130   1        Keyevent.LongPressEvent=0;//短按和长按事件没发生
+ 131   1        //单击+长按
+ 132   1        Keyevent.PressAndHoldEvent=(PressCount==1)?1:0;
+ 133   1        }
+ 134          //侧按键逻辑处理函数
+ 135          void SideKey_LogicHandler(void)
+ 136            {   
+ 137   1        unsigned char buf;
+ 138   1        //对按键进行去抖以及重新打开中断的判断
+ 139   1        if(!GPIO_CheckIfIntEnabled(SideKeyGPIOG,GPIOMask(SideKeyGPIOx)))
+ 140   1          {
+ 141   2          KeyState<<=1;
+ 142   2          if(KeyPress)KeyState|=0x01;
+ 143   2          else KeyState&=0xFE;  //附加结果
+ 144   2          //重新打开中断
+ 145   2          buf=KeyState&0x0F;
+ 146   2          if(buf==0x0F||KeyState==0x00)
+ 147   2            {
+ 148   3            P0EXTIF=0;//清除GPIO Flag
+ 149   3            IsKeyPressed=buf==0x0F?0:1; //更新按键状态  
+ 150   3            GPIO_SetExtIntMode(SideKeyGPIOG,SideKeyGPIOx,buf==0x0F?GPIO_Int_Falling:GPIO_Int_Rising);//如果当前
+             -按键是松开状态则设置为下降沿，否则设置为上升沿
+ 151   3            GPIO_EnableInt(SideKeyGPIOG,GPIOMask(SideKeyGPIOx)); //使能中断功能
+ 152   3            }
+ 153   2          } 
+ 154   1        //如果按键释放等待计时器在计时的话，则重置定时器
+ 155   1        if(IsKeyPressed&&(KeyTimer[1]&0x80))KeyTimer[1]=0x80;
+ 156   1        //长按3秒的时间到
+ 157   1        if(IsKeyPressed&&KeyTimer[0]==0x80+(unsigned char)LongPressTime)
+ 158   1          {
+ 159   2          //处理多击+长按事件
+ 160   2          if(Keyevent.ShortPressCount>0)ClickAndHoldEventHandler(Keyevent.ShortPressCount);
+ 161   2          else //长按事件
+ 162   2            {
+ 163   3            Keyevent.ShortPressCount=0;
+ 164   3            Keyevent.PressAndHoldEvent=0;
+ 165   3            Keyevent.LongPressEvent=1;//长按事件发生
+ 166   3            Keyevent.LongPressDetected=1;//长按检测到了  
+ 167   3            }
+ 168   2          KeyTimer[0]=0;//关闭定时器
+ 169   2          }
+ 170   1        //连续短按序列已经结束
+ 171   1        if(!IsKeyPressed&&KeyTimer[1]==0x80+(unsigned char)ContShortPressWindow)
+ 172   1          {
+ 173   2          KeyTimer[1]=0;//关闭定时器1
+ 174   2          if(!Keyevent.LongPressDetected) 
+ 175   2            Keyevent.ShortPressEvent=1;//如果长按事件已经生效，则松开开关时短按事件不生效
+ 176   2          else 
+C51 COMPILER V9.60.0.0   SIDEKEY                                                           11/15/2024 17:07:35 PAGE 4   
+
+ 177   2            Keyevent.LongPressDetected=0; //清除长按检测到的结果
+ 178   2          }
+ 179   1        }
+ 180          //获取侧按键点按次数的获取函数
+ 181          int getSideKeyShortPressCount(bit IsRemoveResult)
+ 182            {
+ 183   1        short buf;
+ 184   1        if(Keyevent.LongPressDetected||Keyevent.PressAndHoldEvent)return 0;
+ 185   1        if(!Keyevent.ShortPressEvent)return 0;
+ 186   1        buf=Keyevent.ShortPressCount;
+ 187   1        if(IsRemoveResult)
+ 188   1          {
+ 189   2          Keyevent.ShortPressEvent=0; //获取了短按结果之后复位
+ 190   2          Keyevent.ShortPressCount=0;  //获取了短按连击次数后清零结果
+ 191   2          }
+ 192   1        return buf;   
+ 193   1        }
+ 194          //获取侧按按键长按2秒事件的函数
+ 195          bit getSideKeyLongPressEvent(void)
+ 196            {
+ 197   1        if(!Keyevent.LongPressEvent)return 0;
+ 198   1        else Keyevent.LongPressEvent=0;
+ 199   1        return 1;
+ 200   1        }
+ 201          //获取侧按按键一直按下的函数
+ 202          bit getSideKeyHoldEvent(void)
+ 203            {
+ 204   1        return Keyevent.LongPressDetected?1:0;
+ 205   1        }
+ 206          //获取侧按按键短按一下立刻长按的函数
+ 207          bit getSideKeyClickAndHoldEvent(void)
+ 208            {
+ 209   1          return Keyevent.PressAndHoldEvent?1:0;
+ 210   1        }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    530    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      1    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      9       3
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1       1
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

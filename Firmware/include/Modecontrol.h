@@ -16,6 +16,8 @@ typedef enum
 typedef struct
 	{
 	int Current;
+	int BattThres;
+	int CurrentLimit;
 	char RampMaxDisplayTIM;
 	char CfgSavedTIM;
 	}RampConfigDef;	

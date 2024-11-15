@@ -1,0 +1,129 @@
+C51 COMPILER V9.60.0.0   RAMPCONFIG                                                        11/15/2024 17:07:36 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE RAMPCONFIG
+OBJECT MODULE PLACED IN .\Objects\RampConfig.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Logic\RampConfig.c OMF2 OPTIMIZE(9,SPEED) BROWSE INCDIR(.\include;.\StdD
+                    -river\inc;.\Hardware) DEBUG PRINT(.\Listings\RampConfig.lst) TABS(2) OBJECT(.\Objects\RampConfig.obj)
+
+line level    source
+
+   1          #include "ModeControl.h"
+   2          #include "cms8s6990.h"
+   3          #include "stdbool.h"
+   4          #include "RampConfig.h"
+   5          #include "LEDMgmt.h"
+   6          #include "Flash.h"
+   7          
+   8          //Òþ²ØÔÚROMÀïÃæµÄ²Êµ°
+   9          code char VendorString[]="XTRLite FW1.1a";
+  10          
+  11          //CRC-8¼ÆËã 
+  12          static u8 PEC8Check(char *DIN,long Len)
+  13          {
+  14   1       unsigned char crcbuf=0x00;
+  15   1       long i,ptr=0;
+  16   1       while(Len>0)
+  17   1       {
+  18   2        //ÔØÈëÊý¾Ý
+  19   2        crcbuf=crcbuf^DIN[ptr];
+  20   2        //¼ÆËã
+  21   2        for(i=8;i>0;i--)
+  22   2         {
+  23   3         if(crcbuf&0x80)crcbuf=(crcbuf<<1)^0x07;//×î¸ßÎ»Îª1£¬×óÒÆÖ®ºóºÍ¶àÏîÊ½XOR
+  24   3         else crcbuf=crcbuf<<1;//×î¸ßÎ»Îª0£¬Ö»ÒÆÎ»²»XOR
+  25   3         }
+  26   2        //¼ÆËãÍêÒ»ÂÖ£¬Ö¸ÏòÏÂÒ»¸öÊý¾Ý
+  27   2        ptr++;
+  28   2        Len--;
+  29   2       }
+  30   1       //ºÍÄÚ´æÀïÃæµÄVendor String½øÐÐXOR
+  31   1       for(i=0;i<sizeof(VendorString);i++)crcbuf^=VendorString[i];
+  32   1       //Êä³ö½á¹û
+  33   1       return crcbuf;
+  34   1      }
+  35          
+  36          //¶ÁÈ¡ÎÞ¼«µ÷¹âÅäÖÃ
+  37          void ReadRampConfig(void)
+  38            {
+  39   1        int i;
+  40   1        extern code ModeStrDef ModeSettings[ModeTotalDepth];
+  41   1        RampROMImg ROMData;
+  42   1        //½âËøflash²¢¿ªÊ¼¶ÁÈ¡
+  43   1        SetFlashState(1);
+  44   1        for(i=0;i<sizeof(RampROMImageDef);i++)Flash_Operation(Flash_Read,i,&ROMData.ByteBuf[i]); //´ÓROMÄÚ¶ÁÈ¡Êý¾
+             -Ý
+  45   1        SetFlashState(0);//¶ÁÈ¡²Ù×÷Íê±Ï£¬Ëø¶¨flash  
+  46   1        //½øÐÐ¶Á³öÊý¾ÝµÄÐ£Ñé
+  47   1        if(ROMData.Data.CheckSum==PEC8Check(ROMData.Data.RampConfig.ByteBuf,sizeof(RampStorDef)))
+  48   1          {
+  49   2          //Ð£Ñé³É¹¦£¬¼ÓÔØÊý¾Ý
+  50   2          MoonCfg=ROMData.Data.RampConfig.Data.MoonCfg;
+  51   2          RampCfg.Current=ROMData.Data.RampConfig.Data.RampCurrent;
+  52   2          IsRampEnabled=ROMData.Data.RampConfig.Data.IsRampEnabled?1:0;
+  53   2          }
+C51 COMPILER V9.60.0.0   RAMPCONFIG                                                        11/15/2024 17:07:36 PAGE 2   
+
+  54   1        //Ð£ÑéÊ§°ÜÖØ½¨Êý¾Ý
+  55   1        else 
+  56   1          {
+  57   2          MoonCfg=MoonLight_10mA; //³ö³§Ä¬ÈÏÎª10mAÔÂ¹â
+  58   2          RestoreToMinimumRampCurrent();
+  59   2          IsRampEnabled=0; //Ä¬ÈÏÎªµ²Î»Ä£Ê½
+  60   2          SaveRampConfig(1); //ÖØ½¨Êý¾ÝºóÁ¢¼´±£´æ²ÎÊý
+  61   2          }
+  62   1        }
+  63          
+  64          //»Ö¸´µ½ÎÞ¼«µ÷¹âÄ£Ê½µÄ×îµÍµçÁ÷
+  65          void RestoreToMinimumRampCurrent(void)  
+  66            {
+  67   1        int i;
+  68   1        extern code ModeStrDef ModeSettings[ModeTotalDepth];
+  69   1        RampCfg.Current=800;
+  70   1        for(i=0;i<ModeTotalDepth;i++)if(ModeSettings[i].ModeIdx==Mode_Ramp)
+  71   1            RampCfg.Current=ModeSettings[i].MinCurrent; //ÕÒµ½µ²Î»Êý¾ÝÖÐÎÞ¼«µ÷¹âµÄµ²Î»
+  72   1        }
+  73          
+  74          //±£´æÎÞ¼«µ÷¹âÅäÖÃ
+  75          void SaveRampConfig(bit IsForceSave)
+  76            {
+  77   1        int i;
+  78   1        RampROMImg ROMData,SavedData;
+  79   1        //½âËøflash²¢¿ªÊ¼¶ÁÈ¡
+  80   1        SetFlashState(1);
+  81   1        if(!IsForceSave)for(i=0;i<sizeof(RampROMImageDef);i++)Flash_Operation(Flash_Read,i,&ROMData.ByteBuf[i]); 
+             -//´ÓROMÄÚ¶ÁÈ¡Êý¾Ý
+  82   1        //¿ªÊ¼½øÐÐÊý¾Ý¹¹½¨
+  83   1        SavedData.Data.RampConfig.Data.MoonCfg=MoonCfg;
+  84   1        SavedData.Data.RampConfig.Data.RampCurrent=RampCfg.Current;
+  85   1        SavedData.Data.RampConfig.Data.IsRampEnabled=IsRampEnabled?true:false;
+  86   1        SavedData.Data.CheckSum=PEC8Check(SavedData.Data.RampConfig.ByteBuf,sizeof(RampStorDef)); //¼ÆËãCRC
+  87   1        //½øÐÐÊý¾Ý±È¶Ô
+  88   1        if(!IsForceSave&&SavedData.Data.CheckSum==ROMData.Data.CheckSum)
+  89   1          {
+  90   2          SetFlashState(0);//¶ÁÈ¡²Ù×÷Íê±Ï£¬Ëø¶¨flash  
+  91   2          return; //Ìø¹ý±£´æ²Ù×÷£¬Êý¾ÝÏàÍ¬  
+  92   2          }
+  93   1        //Êý¾ÝÐèÒª±£´æ£¬¿ªÊ¼²Á³ý²¢±£´æÊý¾Ý
+  94   1        Flash_Operation(Flash_Erase,0,&ROMData.ByteBuf[0]); //²Á³ýÉÈÇø0
+  95   1        for(i=0;i<sizeof(RampROMImageDef);i++)Flash_Operation(Flash_Write,i,&SavedData.ByteBuf[i]); 
+  96   1        SetFlashState(0);//Ð´Èë²Ù×÷Íê±Ï£¬Ëø¶¨flash  
+  97   1        } 
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    573    ----
+   CONSTANT SIZE    =     15    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      35
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

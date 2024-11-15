@@ -119,7 +119,7 @@ void ThermalCalcProcess(void)
 		//求误差
 		Err=Data.Systemp-ConstantTemperature;
 		//比例项(P)
-		TempProtBuf+=(Err>1)?Err*(iabsf(Current/6000)+1):0; //动态比例项调整功能
+		TempProtBuf+=(iabsf(Err)>1)?Err*(iabsf(Current/6000)+1):0; //动态比例项调整功能
     if(TempProtBuf>ProtFullScale)TempProtBuf=ProtFullScale;
     if(TempProtBuf<0)TempProtBuf=0;  //限制幅度
     //积分项(I)

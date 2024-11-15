@@ -1,1 +1,1 @@
-"Logic\BattVoltDisplay.c" OMF2 OPTIMIZE (9,SPEED) BROWSE INCDIR(.\include;.\StdDriver\inc;.\Hardware) DEBUG PRINT(.\Listings\BattVoltDisplay.lst) TABS (2) OBJECT(.\Objects\BattVoltDisplay.obj)
+"Logic\BattVoltDisplay.c" OPTIMIZE (9,SPEED) BROWSE INCDIR(.\include;.\StdDriver\inc;.\Hardware) DEBUG OBJECTEXTEND PRINT(.\Listings\BattVoltDisplay.lst) TABS (2) OBJECT(.\Objects\BattVoltDisplay.obj)

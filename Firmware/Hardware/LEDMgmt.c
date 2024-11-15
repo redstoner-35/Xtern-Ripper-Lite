@@ -49,22 +49,13 @@ void LEDMgmt_SwitchToPWM(void)
 	PWMP2L=0x5F; 
 	PWMP3H=0x09;
 	PWMP3L=0x5F; //CNT=(48MHz/20Khz)-1=2399
-	//配置占空比数据
-	if(LEDBrightNess>2399)LEDBrightNess=2399;
-	if(LEDBrightNess<50)LEDBrightNess=50; //限制传入的占空比数据范围
-	PWMD2H=(LEDBrightNess>>8)&0xFF;
-	PWMD2L=LEDBrightNess&0xFF; 
-	PWMD3H=(LEDBrightNess>>8)&0xFF;
-	PWMD3L=LEDBrightNess&0xFF; 
-	//启用PWM
+	//根据目标亮度值启用定时器
+	LEDMgmt_SetBrightness(); 
+	//启用定时器
 	PWMCNTE|=0x0C; //使能通道0的计数器，PWM开始运作
-	PWMLOADEN|=0x0C; //加载通道0的PWM值
 	while(LEDMgmt_WaitSubmitDuty()); //等待加载结束
 	}	
 
-//调试模式，是否使能降档提示
-#define EnableStepDownInfo	
-	
 //设置LED开关	
 static void SetLEDONOFF(bit RLED,bit GLED)
 	{
@@ -107,20 +98,6 @@ void LEDControlHandler(void)
 	{
 	char buf;
 	bit IsLEDON,RLED,GLED;
-	#ifdef EnableStepDownInfo
-	extern bit IsTempLIMActive;
-	//降档之后每隔一段时间闪一下侧按	
-	if(!IsTempLIMActive)StepDownTIM=0;
-	else if(StepDownTIM>8)
-		 {
-	   RLED=0;
-		 GLED=0;
-		 timer=0;	 
-		 StepDownTIM=0;
-		 return;
-		 }	
-	else StepDownTIM++;
-	#endif
 	//据目标模式设置LED状态
 	switch(LEDMode)
 		{
@@ -141,34 +118,21 @@ void LEDControlHandler(void)
 			else timer=timer&0x80?0x00:0x80; //翻转bit 7并重置定时器
 			RLED=timer&0x80?1:0; //根据bit 7载入LED控制位
 			break;
+		case LED_GreenBlinkThird:
 		case LED_RedBlinkThird: //LED红色闪烁3次
 		case LED_RedBlinkFifth: //LED红色闪烁5次
-			GLED=0; //绿色LED持续关闭
 			timer&=0x7F; //去掉最上面的位
-			if(timer>(LEDMode==LED_RedBlinkThird?6:10))
+			if(timer>((LEDMode==LED_RedBlinkThird||LEDMode==LED_GreenBlinkThird)?6:10))
 				{
+				GLED=0; //绿色LED持续关闭
 				RLED=0;
 				LEDMode=LED_OFF; //时间到，关闭识别
 				}
 			else //继续计时
 				{
 				IsLEDON=(timer%2)?1:0; //通过余2判断实现检测
-				RLED=IsLEDON;
-				timer++;
-				}		
-		  break;
-		case LED_GreenBlinkThird: //LED绿色闪烁3次
-			RLED=0; //红色LED持续关闭
-			timer&=0x7F; //去掉最上面的位
-			if(timer>6)
-				{
-				GLED=0;
-				LEDMode=LED_OFF; //时间到，关闭识别
-				}
-			else //继续计时
-				{
-				IsLEDON=(timer%2)?1:0; //通过余2判断实现检测
-				GLED=IsLEDON;
+				RLED=LEDMode==LED_GreenBlinkThird?0:IsLEDON;
+					GLED=LEDMode==LED_GreenBlinkThird?IsLEDON:0;
 				timer++;
 				}		
 		  break;

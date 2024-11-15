@@ -96,7 +96,7 @@ code ModeStrDef ModeSettings[ModeTotalDepth]=
 		Mode_Ramp,
 		7500,  //7500mA电流最大
 		500,   //最小500mA
-		3000,  //3.0V关断
+		3100,  //3.1V关断
 		false, //不能带记忆  
 		true
 		}, 
@@ -133,11 +133,19 @@ xdata char DisplayLockedTIM=0; //锁定和战术模式进入退出显示
 xdata char ClickHoldReverseGearTIM=0; //挡位模式下单击+长按倒向换挡
 xdata	char MoonCfgTIM=0; //月光挡位配置计时
 xdata char SOSTIM=0;  //SOS计时
+xdata char RampRiseCurrentTIM=0; //无极调光恢复电流的计时器	
 	
 //初始化模式状态机
 void ModeFSMInit(void)
 {
+	char i;
+	//初始化无极调光
 	RampCfg.RampMaxDisplayTIM=0;
+  for(i=0;i<ModeTotalDepth;i++)if(ModeSettings[i].ModeIdx==Mode_Ramp)
+	    {
+			RampCfg.BattThres=ModeSettings[i].LowVoltThres; //低压检测上限恢复
+			RampCfg.CurrentLimit=ModeSettings[i].Current; //找到挡位数据中无极调光的挡位，电流上限恢复
+			}
 	ReadRampConfig(); //从EEPROM内读取无极调光配置
 	//挡位模式配置
 	SOSState=SOSState_Prepare; //SOS状态机重置为初始值
@@ -239,7 +247,8 @@ void ModeFSMTIMHandler(void)
 	char buf;
 	//SOS定时器
 	if(SOSTIM>0)SOSTIM--;
-	//无极调光提示定时器
+	//无极调光相关的定时器
+	if(RampRiseCurrentTIM>0&&RampRiseCurrentTIM<9)RampRiseCurrentTIM++;
 	if(RampCfg.CfgSavedTIM<32)RampCfg.CfgSavedTIM++;
 	if(RampCfg.RampMaxDisplayTIM>0)RampCfg.RampMaxDisplayTIM--;
 	//锁定操作提示计时器
@@ -270,6 +279,42 @@ int SwitchToGear(ModeIdxDef TargetMode)
 		}
 	//啥也没找到，出错
 	return 1;
+	}
+	
+//无极调光的低电压保护
+void RampLowVoltHandler(void)
+	{
+	char time;
+	extern xdata BattStatusDef BattState;
+	if(!IsBatteryAlert&&!IsBatteryFault)//没有告警
+		{
+		BattAlertTimer=0;
+		if(BattState==Battery_Plenty) //电池电量回升到充足状态，缓慢增加电流限制
+			{
+	    if(RampCfg.CurrentLimit<CurrentMode->Current)
+				 {
+			   if(!RampRiseCurrentTIM)RampRiseCurrentTIM=1; //启动定时器开始计时
+				 else if(RampRiseCurrentTIM<9)return; //时间未到
+         RampRiseCurrentTIM=1;
+				 if(RampCfg.BattThres>CurrentMode->LowVoltThres)RampCfg.BattThres=CurrentMode->LowVoltThres; //电压检测达到上限，禁止继续增加
+				 else RampCfg.BattThres+=50; //电压检测上调50mV
+         if(RampCfg.CurrentLimit>CurrentMode->Current)RampCfg.CurrentLimit=CurrentMode->Current;//增加电流之后检测电流值是否超出允许值
+				 else RampCfg.CurrentLimit+=250;	//电流上调250mA		 
+				 }
+			else RampRiseCurrentTIM=0; //已达到电流上限禁止继续增加
+			}
+		return;
+		}
+	else RampRiseCurrentTIM=0; //触发警报，复位尝试增加电流的定时器
+	if(BattAlertTimer==0)BattAlertTimer=0x80;//定时器启动
+	time=BattAlertTimer&0x7F; //获取当前的计时值
+	if(IsBatteryFault&&time>4)ReturnToOFFState(); //电池电压低于关机阈值大于0.5秒，立即关闭
+	else if(time>BatteryAlertDelay) //电池挡位触发
+		{
+		if(RampCfg.CurrentLimit>750)RampCfg.CurrentLimit-=250; //电流下调250mA
+		if(RampCfg.BattThres>2750)RampCfg.BattThres-=25; //减少25mV
+    BattAlertTimer=0x80;//重置定时器
+		}
 	}
 
 //长按关机函数	
@@ -374,13 +419,19 @@ void SideKeyLEDBriAdjHandler(void)
 //无极调光处理
 static void RampAdjHandler(void)
 	{
-	static bit IsKeyPressed=0;		
+	static bit IsKeyPressed=0;	
+  int Limit;
+	bit IsPress;
+  //计算出无极调光上限
+	IsPress=(getSideKeyClickAndHoldEvent()||getSideKeyHoldEvent())?1:0;
+	Limit=RampCfg.CurrentLimit<CurrentMode->Current?RampCfg.CurrentLimit:CurrentMode->Current;
+	if(Limit<CurrentMode->Current&&IsPress&&RampCfg.Current>Limit)RampCfg.Current=Limit; //在电流被限制的情况下用户按下按键尝试调整电流，立即限幅
 	//进行亮度调整
 	if(getSideKeyHoldEvent()&&!IsKeyPressed)RampCfg.Current+=3; //正向增加或者减少电流
 	else if(getSideKeyClickAndHoldEvent()&&!IsKeyPressed)RampCfg.Current-=3; //增加或者减少电流	
   else if(!getSideKeyClickAndHoldEvent()&&!getSideKeyHoldEvent()&&IsKeyPressed)IsKeyPressed=0; //用户放开按键，允许调节		
 	//电流达到上限
-	if(getSideKeyHoldEvent()&&!IsKeyPressed&&RampCfg.Current>=CurrentMode->Current)
+	if(getSideKeyHoldEvent()&&!IsKeyPressed&&RampCfg.Current>=Limit)
 			{
 			RampCfg.RampMaxDisplayTIM=4; //熄灭0.5秒指示已经到上限
 			RampCfg.Current=CurrentMode->Current; //限制电流最大值	
@@ -401,6 +452,29 @@ static void RampAdjHandler(void)
 			SaveRampConfig(0);  //一段时间内没操作说明已经调节完毕，保存数据
 			}
 	}
+//检测是否需要关机
+static void DetectIfNeedsOFF(int ClickCount)
+	{
+	if(ClickCount!=1)return;
+	if(!IsTacMode&&getSideKeyHoldEvent())return;
+	ReturnToOFFState();//侧按单击或者在战术模式下松开按钮时关机
+	}	
+	
+//获取月光档电流
+static int ObtainMoonCurrent(void)	
+	{
+	switch(MoonCfg)
+		{
+		case MoonLight_10mA:return 10;  //10mA
+		case MoonLight_25mA:return 25;  //25mA
+		case MoonLight_50mA:return 50;  //50mA
+		case MoonLight_100mA:return 100; //100mA
+		case MoonLight_200mA:return 200; //200mA
+    }
+	//其余情况返回默认值
+	return CurrentMode->Current;
+	}
+	
 //PI环路的温控数据处理声明
 int ThermalILIMCalc(int Input);
 	
@@ -509,17 +583,17 @@ void ModeSwitchFSM(void)
 		    break;			
     //无极调光状态				
     case Mode_Ramp:
-			  BatteryLowAlertProcess(true,Mode_Ramp);
-		    if(ClickCount==1||(IsTacMode&&!getSideKeyHoldEvent()))ReturnToOFFState();//侧按单击或者在战术模式下松开按钮时关机
+		    DetectIfNeedsOFF(ClickCount); //检测是否需要关机
 				if(ClickCount==2&&!IsDisableTurbo)SwitchToGear(Mode_Turbo); //双击极亮
 				if(ClickCount==3)SwitchToGear(Mode_Strobe); //侧按3击进入爆闪
 		    //无极调光处理
+		    RampLowVoltHandler(); //低电压保护
         RampAdjHandler();			
 		    break;
     //低亮状态		
     case Mode_Low:
 			  BatteryLowAlertProcess(true,Mode_Low);
-		    if(ClickCount==1||(IsTacMode&&!getSideKeyHoldEvent()))ReturnToOFFState();//侧按单击或者在战术模式下松开按钮时关机
+		    DetectIfNeedsOFF(ClickCount); //执行关机动作检测
 		    if(ClickCount==2&&!IsDisableTurbo)SwitchToGear(Mode_Turbo); //双击极亮
 				if(ClickCount==3)SwitchToGear(Mode_Strobe); //侧按3击进入爆闪
 		    //长按换挡处理
@@ -528,7 +602,7 @@ void ModeSwitchFSM(void)
     //中亮状态		
     case Mode_Mid:
 			  BatteryLowAlertProcess(false,Mode_Low);
-		    if(ClickCount==1||(IsTacMode&&!getSideKeyHoldEvent()))ReturnToOFFState();//侧按单击或者在战术模式下松开按钮时关机
+		    DetectIfNeedsOFF(ClickCount); //执行关机动作检测
 		    if(ClickCount==2&&!IsDisableTurbo)SwitchToGear(Mode_Turbo); //双击极亮
 				if(ClickCount==3)SwitchToGear(Mode_Strobe); //侧按3击进入爆闪
 		    //长按换挡处理
@@ -538,7 +612,7 @@ void ModeSwitchFSM(void)
 	  //中高亮状态
     case Mode_MHigh:
 			  BatteryLowAlertProcess(false,Mode_Mid);
-		    if(ClickCount==1||(IsTacMode&&!getSideKeyHoldEvent()))ReturnToOFFState();//侧按单击或者在战术模式下松开按钮时关机
+		    DetectIfNeedsOFF(ClickCount); //执行关机动作检测
 		    if(ClickCount==2&&!IsDisableTurbo)SwitchToGear(Mode_Turbo); //双击极亮
 				if(ClickCount==3)SwitchToGear(Mode_Strobe); //侧按3击进入爆闪
 		    //长按换挡处理
@@ -548,7 +622,7 @@ void ModeSwitchFSM(void)
 	  //高亮状态
     case Mode_High:
 			  BatteryLowAlertProcess(false,Mode_MHigh);
-		    if(ClickCount==1||(IsTacMode&&!getSideKeyHoldEvent()))ReturnToOFFState();//侧按单击或者在战术模式下松开按钮时关机
+		    DetectIfNeedsOFF(ClickCount); //执行关机动作检测
 		    if(ClickCount==2&&!IsDisableTurbo)SwitchToGear(Mode_Turbo); //双击极亮
 				if(ClickCount==3)SwitchToGear(Mode_Strobe); //侧按3击进入爆闪
 		    //长按换挡处理
@@ -558,14 +632,14 @@ void ModeSwitchFSM(void)
 		//极亮状态
     case Mode_Turbo:
 			  BatteryLowAlertProcess(false,Mode_High);
-		    if(ClickCount==1||(IsTacMode&&!getSideKeyHoldEvent()))ReturnToOFFState();//侧按单击或者在战术模式下松开按钮时关机
+		    DetectIfNeedsOFF(ClickCount); //执行关机动作检测
 			  if(ClickCount==2||IsForceLeaveTurbo)SwitchToGear(IsRampEnabled?Mode_Ramp:Mode_Low); //双击或者温度达到上限值，强制返回到低亮
 				if(ClickCount==3)SwitchToGear(Mode_Strobe); //侧按3击进入爆闪
 		    break;	
 		//爆闪状态
     case Mode_Strobe:
 			  BatteryLowAlertProcess(true,Mode_Strobe);
-		    if(ClickCount==1||(IsTacMode&&!getSideKeyHoldEvent()))ReturnToOFFState();//侧按单击或者在战术模式下松开按钮时关机
+		    DetectIfNeedsOFF(ClickCount); //执行关机动作检测
 			  if(ClickCount==2&&!IsDisableTurbo)SwitchToGear(Mode_Turbo); //双击极亮
 				if(ClickCount==3)SwitchToGear(IsRampEnabled?Mode_Ramp:Mode_Low); //三击退回到普通模式
 		    //长按换挡处理
@@ -574,7 +648,7 @@ void ModeSwitchFSM(void)
     //SOS求救挡位		
 		case Mode_SOS:
 			  BatteryLowAlertProcess(true,Mode_SOS);
-		    if(ClickCount==1||(IsTacMode&&!getSideKeyHoldEvent()))ReturnToOFFState();//侧按单击或者在战术模式下松开按钮时关机
+		    DetectIfNeedsOFF(ClickCount); //执行关机动作检测
 			  if(ClickCount==2&&!IsDisableTurbo)SwitchToGear(Mode_Turbo); //双击极亮
 				if(ClickCount==3)SwitchToGear(IsRampEnabled?Mode_Ramp:Mode_Low); //三击退回到普通模式
 		    //长按换挡处理
@@ -583,20 +657,17 @@ void ModeSwitchFSM(void)
 		}
   //应用输出电流
 	if(DisplayLockedTIM>0)TargetCurrent=80; //用户进入或者退出锁定，用80mA短暂点亮提示一下
-	else if(!StrobeFlag&&CurrentMode->ModeIdx==Mode_Strobe)TargetCurrent=-1;	 //爆闪模式下让电流跟随flag(-1电流表示不关闭防反接FET)
 	else if(RampCfg.RampMaxDisplayTIM>0)TargetCurrent=-1; //无极调光模式在抵达上下限后短暂熄灭(-1电流表示不关闭防反接FET)
-  else if(CurrentMode->ModeIdx==Mode_Ramp)TargetCurrent=RampCfg.Current; //无极调光模式取无极调光参数结构体内的电流
-	else if(CurrentMode->ModeIdx==Mode_SOS)TargetCurrent=SOSFSM(); //SOS模式，输出电流受SOS状态机调控
-	else if(CurrentMode->ModeIdx==Mode_Moon)switch(MoonCfg)
+	else switch(CurrentMode->ModeIdx)	
 		{
-		case MoonLight_10mA:TargetCurrent=10;break;  //10mA
-		case MoonLight_25mA:TargetCurrent=25;break;  //25mA
-		case MoonLight_50mA:TargetCurrent=50;break;  //50mA
-		case MoonLight_100mA:TargetCurrent=100;break; //100mA
-		case MoonLight_200mA:TargetCurrent=200;break; //200mA
-		case MoonLight_UsingModeDef:TargetCurrent=CurrentMode->Current;break; //使用模式结构体内的结果
-		}
-  else TargetCurrent=CurrentMode->Current;		
+		case Mode_Strobe:TargetCurrent=StrobeFlag?CurrentMode->Current:-1;break; //爆闪模式根据爆闪flag来回波动
+		case Mode_Ramp://无极调光模式取无极调光参数结构体内的电流
+			TargetCurrent=RampCfg.CurrentLimit<RampCfg.Current?RampCfg.CurrentLimit:RampCfg.Current;
+		  break;
+		case Mode_SOS:TargetCurrent=SOSFSM();break; //SOS模式，输出电流受SOS状态机调控
+		case Mode_Moon:TargetCurrent=ObtainMoonCurrent();break; //月光模式返回对应的电流
+		default:TargetCurrent=CurrentMode->Current; //目标电流
+		}	
 	//根据温控的运算结果对输出电流进行限幅
 	Current=ThermalILIMCalc(TargetCurrent);	
 	}

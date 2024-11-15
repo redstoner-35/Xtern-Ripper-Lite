@@ -1,1 +1,0 @@
-"StdDriver\src\gpio.c" OMF2 OPTIMIZE (9,SPEED) BROWSE INCDIR(.\include;.\StdDriver\inc;.\Hardware) DEBUG PRINT(.\Listings\gpio.lst) TABS (2) OBJECT(.\Objects\gpio.obj)

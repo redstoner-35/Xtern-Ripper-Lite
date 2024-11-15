@@ -5,7 +5,7 @@
 #include "LEDMgmt.h"
 
 //隐藏在ROM里面的彩蛋
-code char VendorString[]="Xtern Ripper Lite V1.0 By:Redstoner_35\x0D\x0A";
+code char VendorString[]="XTRLite FW1.1a";
 
 //CRC-8计算 
 static u8 PEC8Check(char *DIN,long Len)

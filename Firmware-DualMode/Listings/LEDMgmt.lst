@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   LEDMGMT                                                           11/15/2024 17:07:35 PAGE 1   
+C51 COMPILER V9.60.0.0   LEDMGMT                                                           11/16/2024 15:17:13 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE LEDMGMT
@@ -60,11 +60,11 @@ line level    source
   50   1        switch(LEDMode)
   51   1          {
   52   2          case LED_OFF:RLED=0;GLED=0;timer=0;break; //LED关闭
-  53   2          case LED_Green:RLED=0;GLED=1;break;//绿色LED
-  54   2          case LED_Red:RLED=1;GLED=0;break;//红色LED
-C51 COMPILER V9.60.0.0   LEDMGMT                                                           11/15/2024 17:07:35 PAGE 2   
+  53   2          case LED_Amber:RLED=1;GLED=1;break;//黄色LED
+  54   2          case LED_Green:RLED=0;GLED=1;break;//绿色LED
+C51 COMPILER V9.60.0.0   LEDMGMT                                                           11/16/2024 15:17:13 PAGE 2   
 
-  55   2          case LED_Amber:RLED=1;GLED=1;break;//黄色LED
+  55   2          case LED_Red:RLED=1;GLED=0;break;//红色LED
   56   2          case LED_RedBlink_Fast: //红色快闪  
   57   2          case LED_RedBlink: //红色闪烁
   58   2            GLED=0;
@@ -92,7 +92,7 @@ line level    source
   80   2              {
   81   3              IsLEDON=(timer%2)?1:0; //通过余2判断实现检测
   82   3              RLED=LEDMode==LED_GreenBlinkThird?0:IsLEDON;
-  83   3                GLED=LEDMode==LED_GreenBlinkThird?IsLEDON:0;
+  83   3              GLED=LEDMode==LED_GreenBlinkThird?IsLEDON:0;
   84   3              timer++;
   85   3              }   
   86   2            break;
@@ -126,7 +126,7 @@ MODULE INFORMATION:   STATIC OVERLAYABLE
    BIT SIZE         =   ----       1
    EDATA SIZE       =   ----    ----
    HDATA SIZE       =   ----    ----
-C51 COMPILER V9.60.0.0   LEDMGMT                                                           11/15/2024 17:07:35 PAGE 3   
+C51 COMPILER V9.60.0.0   LEDMGMT                                                           11/16/2024 15:17:13 PAGE 3   
 
    XDATA CONST SIZE =   ----    ----
    FAR CONST SIZE   =   ----    ----

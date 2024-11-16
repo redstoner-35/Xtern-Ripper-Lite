@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   TEMPCONTROL                                                       11/15/2024 17:07:36 PAGE 1   
+C51 COMPILER V9.60.0.0   TEMPCONTROL                                                       11/16/2024 15:17:14 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE TEMPCONTROL
@@ -62,7 +62,7 @@ line level    source
   52   1        //温控被禁止或者传入的电流小于等于0，传入多少电流就返回多少 
   53   1        if(!IsTempLIMActive||Input<=0)return Input;
   54   1        //附加比例项
-C51 COMPILER V9.60.0.0   TEMPCONTROL                                                       11/15/2024 17:07:36 PAGE 2   
+C51 COMPILER V9.60.0.0   TEMPCONTROL                                                       11/16/2024 15:17:14 PAGE 2   
 
   55   1        buf=(float)TempProtBuf/(float)ProtFullScale; //换成比例项
   56   1        buf*=100;
@@ -126,7 +126,7 @@ line level    source
  113   2          TempProtBuf+=(iabsf(Err)>1)?Err*(iabsf(Current/6000)+1):0; //动态比例项调整功能
  114   2          if(TempProtBuf>ProtFullScale)TempProtBuf=ProtFullScale;
  115   2          if(TempProtBuf<0)TempProtBuf=0;  //限制幅度
-C51 COMPILER V9.60.0.0   TEMPCONTROL                                                       11/15/2024 17:07:36 PAGE 3   
+C51 COMPILER V9.60.0.0   TEMPCONTROL                                                       11/16/2024 15:17:14 PAGE 3   
 
  116   2          //积分项(I)
  117   2          TempIntegral+=Err; //累加误差

@@ -4,6 +4,7 @@
 #include "delay.h"
 #include "TailKey.h"
 #include "ADCCfg.h"
+#include "PWMCfg.h"
 
 //外部声明
 void SystemPeripheralCTRL(bit IsEnable);//禁用/启用所有系统外设
@@ -35,7 +36,7 @@ void TailKey_Init(void)
 	C0CON2=0x00; //比较器配置为禁止滤波功能，正输出极性
 	C0HYS=0x00; //禁用迟滞
 	CNVRCON=0x39; //比较器负向输入的基准电压为内部1.2V带隙基准按照11/20比例分压得到0.66V
-	CNFBCON=0x00; //关闭所有比较器的PWM刹车功能
+	CNFBCON=0x05; //使能比较器0的刹车功能，在负边沿时禁止PWM输出
 	C0CON0|=0x80; //令C0EN=1，比较器开始运行
 	
 	//使能中断
@@ -73,7 +74,7 @@ void TailKeyCounter(void)
 void TailKey_Handler(void)
 	{
   if(IsEnterLowPowerMode)return;
-	//系统已唤醒，立即开始检测
+	//循环等待按钮重新接通恢复供电
 	do
 		{
 		delay_ms(5);
@@ -81,6 +82,8 @@ void TailKey_Handler(void)
 		if(C0CON1&0x80)IsEnterLowPowerMode++;
 		}			
 	while(IsEnterLowPowerMode!=0xFF);
+  //恢复供电，进行按键逻辑处理
+  PWM_Enable(); //重新使能PWM		
 	TailKeyCount++;
 	TailKeyTIM=0;  //尾按按键按下，发生事件复位计时器
 	}

@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/15/2024 17:07:36 PAGE 1   
+C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/16/2024 15:17:14 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE MODECONTROL
@@ -62,7 +62,7 @@ line level    source
   52              Mode_Mid,
   53              1500,  //1500mAµçÁ÷
   54              0,   //×îÐ¡µçÁ÷Ã»ÓÃµ½£¬ÎÞÊÓ
-C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/15/2024 17:07:36 PAGE 2   
+C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/16/2024 15:17:14 PAGE 2   
 
   55              3000,  //3V¹Ø¶Ï
   56              true,
@@ -126,7 +126,7 @@ line level    source
  114          
  115          //È«¾Ö±äÁ¿(µ²Î»)
  116          ModeStrDef *CurrentMode; //µ²Î»½á¹¹ÌåÖ¸Õë
-C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/15/2024 17:07:36 PAGE 3   
+C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/16/2024 15:17:14 PAGE 3   
 
  117          xdata ModeIdxDef LastMode; //¿ª»úÎªµÍÁÁ
  118          RampConfigDef RampCfg; //ÎÞ¼«µ÷¹âÅäÖÃ   
@@ -190,7 +190,7 @@ line level    source
  176   2             if(buf>(SOSDotTime-1))return CurrentMode->Current; //µ±Ç°×´Ì¬ÐèÒªLEDµçÁ÷£¬·µ»ØÄ¿±êµçÁ÷Öµ   
  177   2             if(SOSTIM==0) //ÏÔÊ¾½áÊø
  178   2               {
-C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/15/2024 17:07:36 PAGE 4   
+C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/16/2024 15:17:14 PAGE 4   
 
  179   3               SOSTIM=SOSGapTime; 
  180   3               SOSState=SOSState_3DotWait;  //½øÈëÑÓÊ±µÈ´ý½×¶Î
@@ -254,7 +254,7 @@ line level    source
  238   2          buf=(int)MoonCfg;
  239   2          if(buf<(int)MoonLight_UsingModeDef)buf++;
  240   2          else buf=0;
-C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/15/2024 17:07:36 PAGE 5   
+C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/16/2024 15:17:14 PAGE 5   
 
  241   2          MoonCfg=(MoonLightBrightnessDef)buf; //·´¸´Ñ­»·index
  242   2          }
@@ -318,7 +318,7 @@ line level    source
  299   4               else if(RampRiseCurrentTIM<9)return; //Ê±¼äÎ´µ½
  300   4               RampRiseCurrentTIM=1;
  301   4               if(RampCfg.BattThres>CurrentMode->LowVoltThres)RampCfg.BattThres=CurrentMode->LowVoltThres; //µçÑ¹¼ì²
-C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/15/2024 17:07:36 PAGE 6   
+C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/16/2024 15:17:14 PAGE 6   
 
              -â´ïµ½ÉÏÏÞ£¬½ûÖ¹¼ÌÐøÔö¼Ó
  302   4               else RampCfg.BattThres+=50; //µçÑ¹¼ì²âÉÏµ÷50mV
@@ -382,7 +382,7 @@ line level    source
              -¼ÆÊ±Æ÷¸´Î»
  359   1        else
  360   1          {
-C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/15/2024 17:07:36 PAGE 7   
+C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/16/2024 15:17:14 PAGE 7   
 
  361   2          buf=HoldChangeGearTIM&0x3F; //È¡³öTIMÖµ
  362   2          if(buf==0&&!(HoldChangeGearTIM&0x40))HoldChangeGearTIM|=0x80; //Áî×î¸ßÎ»Îª1Ö¸Ê¾»»µ²¿ÉÒÔ¼ÌÐø
@@ -446,7 +446,7 @@ line level    source
  418   2          if(RampCfg.Current<=CurrentMode->MinCurrent)
  419   2            {
  420   3            RampDIR=1;
-C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/15/2024 17:07:36 PAGE 8   
+C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/16/2024 15:17:14 PAGE 8   
 
  421   3            RampCfg.Current=CurrentMode->MinCurrent; //µçÁ÷´ïµ½ÏÂÏÞ¿ªÊ¼·­×ª
  422   3            }
@@ -510,7 +510,7 @@ line level    source
  480   1        //ÆäÓàÇé¿ö·µ»ØÄ¬ÈÏÖµ
  481   1        return CurrentMode->Current;
  482   1        }
-C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/15/2024 17:07:36 PAGE 9   
+C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/16/2024 15:17:14 PAGE 9   
 
  483          
  484          //½øÈë¼«ÁÁºÍ±¬ÉÁµÄÅÐ¶Ï
@@ -574,7 +574,7 @@ line level    source
  542   3                DisplayLockedTIM=2; //Ö¸Ê¾Õ½ÊõÇÐ»»
  543   3                }
  544   2            if(IsTacMode) //Õ½ÊõÄ£Ê½¼¤»îÊ±½øÐÐÅÐ¶Ï
-C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/15/2024 17:07:36 PAGE 10  
+C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/16/2024 15:17:14 PAGE 10  
 
  545   2                {
  546   3                if(!getSideKeyHoldEvent())break;
@@ -635,10 +635,10 @@ line level    source
  600   2              break;      
  601   2          //ÎÞ¼«µ÷¹â×´Ì¬        
  602   2          case Mode_Ramp:
- 603   2              if(!IsRampStart) //·Çµ÷ÕûÄ£Ê½£¬ÔÊÐíµ÷¹â
+ 603   2              if(!IsRampStart) //·Çµ÷ÕûÄ£Ê½£¬ÔÊÐí¹Ø»úºÍ½øÈëÆäËûÄ£Ê½
  604   2                {
  605   3                DetectIfNeedsOFF(ClickCount); //¼ì²âÊÇ·ñÐèÒª¹Ø»ú
-C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/15/2024 17:07:36 PAGE 11  
+C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/16/2024 15:17:14 PAGE 11  
 
  606   3                EnterTurboStrobe(TKCount,ClickCount); //½øÈë¼«ÁÁ»òÕß±¬ÉÁµÄ¼ì²â
  607   3                }
@@ -702,7 +702,7 @@ line level    source
  664   2          case Mode_SOS:
  665   2              BatteryLowAlertProcess(true,Mode_SOS);
  666   2              DetectIfNeedsOFF(ClickCount); //Ö´ÐÐ¹Ø»ú¶¯×÷¼ì²â
-C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/15/2024 17:07:36 PAGE 12  
+C51 COMPILER V9.60.0.0   MODECONTROL                                                       11/16/2024 15:17:14 PAGE 12  
 
  667   2              if(ClickCount==2&&!IsDisableTurbo)SwitchToGear(Mode_Turbo); //Ë«»÷¼«ÁÁ
  668   2              if(ClickCount==3)SwitchToGear(IsRampEnabled?Mode_Ramp:Mode_Low); //Èý»÷ÍË»Øµ½ÆÕÍ¨Ä£Ê½

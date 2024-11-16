@@ -22,6 +22,13 @@ void PWM_DeInit(void)
 	PWM01PSC=0x00;  //关闭PWM计数器
 	}
 
+//上传PWM值
+static void UploadPWMValue(void)	
+	{
+	PWMLOADEN=0x01; //加载通道0的PWM值
+	while(PWMLOADEN!=0); //等待加载结束
+	}
+
 //PWM定时器初始化
 void PWM_Init(void)
 	{
@@ -57,9 +64,8 @@ void PWM_Init(void)
 	IsPWMLoading=0; 
 	IsNeedToUploadPWM=0;
 	//启用PWM
-	PWMCNTE=0x01; //使能通道0的计数器，PWM开始运行
-	PWMLOADEN=0x01; //加载通道0的PWM值
-	while(PWMLOADEN!=0); //等待加载结束
+	PWM_Enable();
+	UploadPWMValue();
 	}
 
 //PWM强制设置占空比
@@ -67,8 +73,7 @@ void PWM_ForceSetDuty(bit IsEnable)
 	{
 	PWMD0H=0x01;
 	PWMD0L=IsEnable?0xFF:0;			
-	PWMLOADEN=0x01; //开始加载
-	while(PWMLOADEN); //等待加载结束
+	UploadPWMValue(); //立即上传PWM值
 	PWMMASKE=IsNeedToEnableOutput?0x00:0x01;  //设置寄存器打开输出
 	}	
 	

@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   MAIN                                                              11/15/2024 17:07:35 PAGE 1   
+C51 COMPILER V9.60.0.0   MAIN                                                              11/16/2024 15:17:13 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE MAIN
@@ -62,7 +62,7 @@ line level    source
   52   2          ThermalCalcProcess(); //温控PI环路计算和过热保护
   53   2          OutputChannel_Calc(); //根据电流进行输出通道控制
   54   2          PWM_OutputCtrlHandler(); //处理PWM输出事务  
-C51 COMPILER V9.60.0.0   MAIN                                                              11/15/2024 17:07:35 PAGE 2   
+C51 COMPILER V9.60.0.0   MAIN                                                              11/16/2024 15:17:13 PAGE 2   
 
   55   2          //8Hz定时处理
   56   2          if(!SysHBFlag)continue; //时间没到，跳过处理

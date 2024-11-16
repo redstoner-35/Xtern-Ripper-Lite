@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/15/2024 17:07:35 PAGE 1   
+C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/16/2024 15:17:13 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE OUTPUTCHANNEL
@@ -62,7 +62,7 @@ line level    source
   52   1        //检查是否由看门狗导致复位  
   53   1        if(GetIfWDogCauseRST()) 
   54   1          {
-C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/15/2024 17:07:35 PAGE 2   
+C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/16/2024 15:17:13 PAGE 2   
 
   55   2          ReportError(Fault_MPUHang); //指示故障由单片机死机导致
   56   2          return;
@@ -126,7 +126,7 @@ line level    source
  113   1        CurrentBuf=0;
  114   1        //关闭所有输出
  115   1        RevPGate=0;
-C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/15/2024 17:07:35 PAGE 3   
+C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/16/2024 15:17:13 PAGE 3   
 
  116   1        DCDCEN=0;
  117   1        LShuntSEL=0;
@@ -190,7 +190,7 @@ line level    source
  174   1        else
  175   1          {
  176   2          PWMDuty=Duty_Calc(MainChannelShuntmOhm,CurrentBuf,HighShuntIOffset);
-C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/15/2024 17:07:35 PAGE 4   
+C51 COMPILER V9.60.0.0   OUTPUTCHANNEL                                                     11/16/2024 15:17:13 PAGE 4   
 
  177   2          RevPGate=1;   //主输出启用，打开防反接FET提高能效
  178   2          DCDCEN=1; 

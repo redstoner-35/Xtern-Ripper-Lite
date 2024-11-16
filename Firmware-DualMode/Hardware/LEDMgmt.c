@@ -50,9 +50,9 @@ void LEDControlHandler(void)
 	switch(LEDMode)
 		{
 		case LED_OFF:RLED=0;GLED=0;timer=0;break; //LED关闭
+		case LED_Amber:RLED=1;GLED=1;break;//黄色LED
 		case LED_Green:RLED=0;GLED=1;break;//绿色LED
 		case LED_Red:RLED=1;GLED=0;break;//红色LED
-		case LED_Amber:RLED=1;GLED=1;break;//黄色LED
 		case LED_RedBlink_Fast: //红色快闪	
 		case LED_RedBlink: //红色闪烁
 			GLED=0;
@@ -80,7 +80,7 @@ void LEDControlHandler(void)
 				{
 				IsLEDON=(timer%2)?1:0; //通过余2判断实现检测
 				RLED=LEDMode==LED_GreenBlinkThird?0:IsLEDON;
-					GLED=LEDMode==LED_GreenBlinkThird?IsLEDON:0;
+				GLED=LEDMode==LED_GreenBlinkThird?IsLEDON:0;
 				timer++;
 				}		
 		  break;

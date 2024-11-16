@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   RAMPCONFIG                                                        11/15/2024 17:07:36 PAGE 1   
+C51 COMPILER V9.60.0.0   RAMPCONFIG                                                        11/16/2024 15:17:14 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE RAMPCONFIG
@@ -62,7 +62,7 @@ line level    source
   51   2          RampCfg.Current=ROMData.Data.RampConfig.Data.RampCurrent;
   52   2          IsRampEnabled=ROMData.Data.RampConfig.Data.IsRampEnabled?1:0;
   53   2          }
-C51 COMPILER V9.60.0.0   RAMPCONFIG                                                        11/15/2024 17:07:36 PAGE 2   
+C51 COMPILER V9.60.0.0   RAMPCONFIG                                                        11/16/2024 15:17:14 PAGE 2   
 
   54   1        //校验失败重建数据
   55   1        else 

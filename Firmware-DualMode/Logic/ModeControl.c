@@ -600,7 +600,7 @@ void ModeSwitchFSM(void)
 		    break;			
     //无极调光状态				
     case Mode_Ramp:
-		    if(!IsRampStart) //非调整模式，允许调光
+		    if(!IsRampStart) //非调整模式，允许关机和进入其他模式
 					{
 			    DetectIfNeedsOFF(ClickCount); //检测是否需要关机
 					EnterTurboStrobe(TKCount,ClickCount); //进入极亮或者爆闪的检测

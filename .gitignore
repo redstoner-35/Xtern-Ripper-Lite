@@ -1,0 +1,10 @@
+Firmware/Objects
+Firmware-DualMode/Objects
+MainPCB/History
+MainPCB/__Previews
+SideKeyPCB/History
+SideKeyPCB/__Previews
+*.uvproj
+*.uvopt
+*.uvgui
+*.redstoner_35

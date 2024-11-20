@@ -8,7 +8,7 @@
 #define TailKeyRelTime 2 //尾按放开的时间
 
 //外部引用
-extern xdata char TailKeyTIM;
+extern char TailKeyTIM;
 
 //函数
 void TailMemory_Recall(void);

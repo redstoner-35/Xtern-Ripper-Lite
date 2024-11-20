@@ -505,7 +505,7 @@ void ModeSwitchFSM(void)
 	//获取按键状态
 	TKCount=GetTailKeyCount();
 	IsHoldEvent=getSideKeyLongPressEvent();	
-	ClickCount=getSideKeyShortPressCount(1);	//读取按键处理函数传过来的参数
+	ClickCount=getSideKeyShortPressCount(0);	//读取按键处理函数传过来的参数
 	//挡位记忆参数检查和EEPROM记忆
 	if(LastMode==Mode_OFF||LastMode>=ModeTotalDepth)LastMode=Mode_Low;
 	if(TailSaveTIM==24) //在挡位停留的时间足够，保存数据
@@ -684,5 +684,6 @@ void ModeSwitchFSM(void)
 		default:TargetCurrent=CurrentMode->Current; //目标电流
 		}	
 	//根据温控的运算结果对输出电流进行限幅
+	getSideKeyShortPressCount(1); //清除按键处理
 	Current=ThermalILIMCalc(TargetCurrent);	
 	}

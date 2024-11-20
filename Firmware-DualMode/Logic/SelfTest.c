@@ -64,7 +64,7 @@ void OutputFaultDetect(void)
 			buf=buf<8?buf+2:8; //计时器累计
 			ShortDetectTIM&=0x7F;
 			}
-		else if(Data.OutputVoltage>7.15) //输出开路
+		else if(Data.OutputVoltage>7.3) //输出开路
 			{
 			buf=buf<8?buf+1:8;  //计时器累计
 			ShortDetectTIM|=0x80;

@@ -37,7 +37,11 @@ void TailMemory_Save(ModeIdxDef Mode)
 		else LastMode=buf-1; //当前还未抵达最后一个模式		
 		}
 	//比对数据
-	if(Mode==Mode_Turbo||Mode==Mode_Strobe||Mode==Mode_SOS||Mode==Mode_Moon)Mode=LastMode; //极亮爆闪和SOS不记忆。使用进入之前的挡位
+	if(Mode==Mode_Turbo||Mode==Mode_Strobe||Mode==Mode_SOS||Mode==Mode_Moon)//极亮爆闪和SOS不记忆。使用进入之前的挡位
+		{
+		if(LastMode!=Mode_OFF)Mode=LastMode;
+		else Mode=Mode_Low; //如果上次记忆是关机状态，则配置为低亮档
+		}			
 	if(LastMode==(unsigned char)Mode) //当前模式记忆模块里面数据和目标要写入的数据相同
 		{
 		SetFlashState(0);

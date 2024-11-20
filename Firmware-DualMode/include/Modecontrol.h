@@ -31,7 +31,7 @@ typedef enum
 	Fault_DCDCOpen,  //LED开路 ID:4
 	Fault_NTCFailed, //NTC故障 ID:5
 	Fault_OverHeat, //过热故障 ID:6
-	Fault_MPUHang, //单片机死机导致看门狗触发复位 ID:7
+	Fault_MPUHang=8, //单片机死机导致看门狗触发复位 ID:8
 	}FaultCodeDef;	
 	
 typedef enum

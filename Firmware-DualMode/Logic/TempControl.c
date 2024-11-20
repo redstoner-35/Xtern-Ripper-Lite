@@ -15,7 +15,7 @@
 //温度配置
 #define ForceOffTemp 75 //过热关机温度
 #define ForceDisableTurboTemp 60 //超过此温度无法进入极亮
-#define ConstantTemperature 53 //温控启动后维持的温度
+#define ConstantTemperature 50 //温控启动后维持的温度
 
 //温度控制用全局变量
 static int TempIntegral=0;

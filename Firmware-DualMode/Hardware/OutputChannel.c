@@ -67,7 +67,7 @@ void OutputChannel_TestRun(void)
 		{
 		delay_ms(5);
 		SystemTelemHandler();
-	  if(Data.OutputVoltage>7.1)break; //输出电压正常
+	  if(Data.OutputVoltage>4.2)break; //输出电压正常
 		retry--;
 		}
 	while(retry>0);

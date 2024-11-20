@@ -5,9 +5,6 @@
 #include "LEDMgmt.h"
 #include "Flash.h"
 
-//隐藏在ROM里面的彩蛋
-code char VendorString[]="XTRLite FW1.1a";
-
 //CRC-8计算 
 static u8 PEC8Check(char *DIN,long Len)
 {
@@ -27,8 +24,6 @@ static u8 PEC8Check(char *DIN,long Len)
 	ptr++;
 	Len--;
  }
- //和内存里面的Vendor String进行XOR
- for(i=0;i<sizeof(VendorString);i++)crcbuf^=VendorString[i];
  //输出结果
  return crcbuf;
 }

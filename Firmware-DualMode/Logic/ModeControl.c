@@ -485,6 +485,15 @@ static int ObtainMoonCurrent(void)
 static void EnterTurboStrobe(int TKCount,int ClickCount)	
 	{
 	extern bit IsDisableTurbo;
+	if(TKCount==5&&!IsRampEnabled) //五击切换到无极调光模式
+		{
+		SwitchToGear(Mode_Ramp); //进入无极调光
+		IsRampEnabled=1; 
+		RestoreToMinimumRampCurrent(); //如果是无极调光则恢复到最低电流	
+		RampCfg.RampMaxDisplayTIM=8; //熄灭1秒进行切换
+		LEDMode=!IsRampEnabled?LED_RedBlinkThird:LED_GreenBlinkThird; //显示是否开启
+		SaveRampConfig(0); //保存配置到ROM内
+		}
 	if((TKCount==2||ClickCount==2)&&!IsDisableTurbo)SwitchToGear(Mode_Turbo); //双击极亮
 	if(TKCount==3||ClickCount==3)SwitchToGear(Mode_Strobe); //侧按3击进入爆闪
 	}
@@ -593,6 +602,7 @@ void ModeSwitchFSM(void)
 		   if((IsHoldEvent||TKCount==1)&&Battery>2.9)  //电池电压充足，长按进入低亮挡位
 					{
 					SwitchToGear(IsRampEnabled?Mode_Ramp:Mode_Low); //长按回到正常挡位模式
+					if(TKCount==1)break; //尾按操作直接跳过转换
 					if(IsRampEnabled)RestoreToMinimumRampCurrent(); //如果是无极调光则恢复到最低电流
 					HoldChangeGearTIM|=0x40; //短时间内禁止长按换挡，确保要用户松开后才能换
 					RampCfg.RampMaxDisplayTIM=4; //熄灭0.5秒进行切换
@@ -602,6 +612,15 @@ void ModeSwitchFSM(void)
     case Mode_Ramp:
 		    if(!IsRampStart) //非调整模式，允许关机和进入其他模式
 					{
+					if(TKCount==4)SwitchToGear(Mode_Moon); //跳到月光 //四击进入月光
+					if(TKCount==5) //五击返回到挡位模式
+						{
+						SwitchToGear(Mode_Low);
+						IsRampEnabled=0; //跳转至挡位模式
+						LEDMode=!IsRampEnabled?LED_RedBlinkThird:LED_GreenBlinkThird; //显示是否开启
+						RampCfg.RampMaxDisplayTIM=8; //熄灭1秒进行切换
+						SaveRampConfig(0); //保存配置到ROM内
+						}
 			    DetectIfNeedsOFF(ClickCount); //检测是否需要关机
 					EnterTurboStrobe(TKCount,ClickCount); //进入极亮或者爆闪的检测
 					}
@@ -641,7 +660,8 @@ void ModeSwitchFSM(void)
 		    DetectIfNeedsOFF(ClickCount); //执行关机动作检测
 				EnterTurboStrobe(TKCount,ClickCount); //进入极亮或者爆闪的检测
 		    //长按换挡处理
-		    SideKeySwitchGearHandler(Mode_Low,TKCount); //换到低档位构成循环
+		    SideKeySwitchGearHandler(Mode_Low,0); //换到低档位构成循环
+		    if(TKCount==1)SwitchToGear(Mode_Moon); //跳到月光	    
 		    SideKey1HRevGearHandler(Mode_MHigh); //单击+长按回退挡位到中高档
 		    break;
 		//极亮状态

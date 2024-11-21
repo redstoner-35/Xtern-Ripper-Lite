@@ -12,7 +12,7 @@
 #define VdivDownResK 1.5 //运放分压部分的下端电阻(KΩ)
 #define LowShuntIOffset 1.00 //低电流通道的电流偏差值
 #define HighShuntIOffset 1.07 //高电流通道下的电流偏差值
-#define PWMDACSettleDelay 10 //在打开PWMDAC之后等待DAC建压的延时
+#define PWMDACSettleDelay 250 //在打开PWMDAC之后等待DAC建压的延时
 
 //外部电流设置参考(mA)
 extern xdata int Current;

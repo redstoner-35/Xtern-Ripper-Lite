@@ -17,6 +17,7 @@ xdata bool IsNotAllowAsync;	 //是否允许ADC引擎运行在异步模式
 //向ADC提交任务	
 static void ADC_SubmitMisson(char Ch)	
 	{
+	unsigned char i=255;
 	//检查传入的通道参数是否合法
 	if(ADCTemp.IsMissionProcessing)return;
 	if(ADC_CheckIfChInvalid(Ch))return; 
@@ -31,7 +32,7 @@ static void ADC_SubmitMisson(char Ch)
 	ADCON1&=0xF0;
 	ADCON1|=(Ch&0x0F); //设置ADCHS[3:0]					
 	//启动转换
-	delay_us(150);  
+	while(--i);  //延时等待通道选通后开始采样
 	ADC_StartConv();
 	}	
 

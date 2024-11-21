@@ -26,7 +26,6 @@ void main()
  	delay_init();	 //延时函数初始化
 	SetSystemHBTimer(1);//启用系统心跳8Hz定时器	
 	//初始化外设
-	CheckIfHBTIMIsReady();//检查系统心跳定时器是否已激活
 	LED_Init(); //初始化侧按LED
 	ADC_Init(); //初始化ADC
 	CheckNTCStatus(); //检查NTC状态

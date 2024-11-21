@@ -265,18 +265,16 @@ void BatteryTelemHandler(void)
 		 {
 		 //电池电量充足
 		 case Battery_Plenty: 
-				if(Battery<3.6)BattState=Battery_Mid; //电池电压小于3.7，回到电量较低状态
+				if(Battery<3.7)BattState=Battery_Mid; //电池电压小于3.7，回到电量较低状态
 			  break;
 		 //电池电量较为充足
 		 case Battery_Mid:
-			  if(Battery>3.8)BattState=Battery_Plenty; //电池电压大于3.8，回到充足状态
+			  if(Battery>3.9)BattState=Battery_Plenty; //电池电压大于3.8，回到充足状态
 				if(Battery<3.2)BattState=Battery_Low; //电池电压低于3.2则切换到电量低的状态
-		    if(Battery<2.8)BattState=Battery_VeryLow; //电池电压低于2.8，直接报告严重不足
 				break;
 		 //电池电量不足
 		 case Battery_Low:
-			  if(Battery>3.85)BattState=Battery_Plenty; //电池电压大于3.8，回到充足状态
-		    if(Battery>3.5)BattState=Battery_Plenty; //电池电压高于3.5，切换到电量充足的状态
+		    if(Battery>3.5)BattState=Battery_Mid; //电池电压高于3.5，切换到电量中等的状态
 			  if(Battery<2.9)BattState=Battery_VeryLow; //电池电压低于2.8，报告严重不足
 		    break;
 		 //电池电量严重不足

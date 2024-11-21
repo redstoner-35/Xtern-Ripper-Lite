@@ -6,6 +6,9 @@
 #include "ADCCfg.h"
 #include "PWMCfg.h"
 
+//是否启用驱动的尾按输入
+#define EnableMechTailKey
+
 //内部全局变量
 static xdata char TailKeyCount=0; //尾部按键按下的次数
 static char TailSenTIM=0; //延时启用尾部检测的定时器
@@ -59,6 +62,7 @@ char GetTailKeyCount(void)
 void TailKeyCounter(void)
 	{
 	//手电开启状态下才进行尾按检测
+	#ifdef EnableMechTailKey
 	if(CurrentMode->ModeIdx==Mode_OFF||CurrentMode->ModeIdx==Mode_Fault)
 		{
 	  CNIE=0x00; //关闭比较器中断
@@ -74,6 +78,7 @@ void TailKeyCounter(void)
 		CNIE=0x01; //使能ACMP0中断，尾按检测激活
 		TailSenTIM++;
 		}
+	#endif
 	//尾按开关按下计时
 	if(TailKeyTIM<TailKeyRelTime)TailKeyTIM++;
 	else if(TailKeyTIM==TailKeyRelTime)

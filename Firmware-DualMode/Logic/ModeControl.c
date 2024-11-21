@@ -218,8 +218,8 @@ static int SOSFSM(void)
 		   SOSState=SOSState_Prepare; //回到准备状态
 		   break;
 		}
-	//其余情况返回-1
-	return -1;
+	//其余情况返回0关闭防反接，确保尾按可以正确响应
+	return 0;
 }
 
 //月光挡位循环配置功能

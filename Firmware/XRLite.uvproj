@@ -133,7 +133,7 @@
             <RestoreMemoryDisplay>1</RestoreMemoryDisplay>
             <RestoreFunctions>1</RestoreFunctions>
             <RestoreToolbox>1</RestoreToolbox>
-            <LimitSpeedToRealTime>0</LimitSpeedToRealTime>
+            <LimitSpeedToRealTime>1</LimitSpeedToRealTime>
             <RestoreSysVw>1</RestoreSysVw>
           </Simulator>
           <Target>
@@ -191,10 +191,10 @@
             <RomSize>2</RomSize>
             <DataHold>0</DataHold>
             <XDataHold>0</XDataHold>
-            <UseOnchipRom>0</UseOnchipRom>
+            <UseOnchipRom>1</UseOnchipRom>
             <UseOnchipArithmetic>0</UseOnchipArithmetic>
             <UseMultipleDPTR>0</UseMultipleDPTR>
-            <UseOnchipXram>0</UseOnchipXram>
+            <UseOnchipXram>1</UseOnchipXram>
             <HadIRAM>1</HadIRAM>
             <HadXRAM>1</HadXRAM>
             <HadIROM>1</HadIROM>
@@ -206,8 +206,8 @@
             <Mode2>0</Mode2>
             <useCB>0</useCB>
             <useXB>0</useXB>
-            <useL251>0</useL251>
-            <useA251>0</useA251>
+            <useL251>1</useL251>
+            <useA251>1</useA251>
             <Mx51>0</Mx51>
             <ModC812>0</ModC812>
             <ModCont>0</ModCont>
@@ -446,6 +446,16 @@
               <FileType>1</FileType>
               <FilePath>.\Hardware\Watchdog.c</FilePath>
             </File>
+            <File>
+              <FileName>Flash.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardware\Flash.c</FilePath>
+            </File>
+            <File>
+              <FileName>TailKey.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardware\TailKey.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -480,6 +490,16 @@
               <FileName>SelfTest.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Logic\SelfTest.c</FilePath>
+            </File>
+            <File>
+              <FileName>TailMemory.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Logic\TailMemory.c</FilePath>
+            </File>
+            <File>
+              <FileName>Strap.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Logic\Strap.c</FilePath>
             </File>
           </Files>
         </Group>

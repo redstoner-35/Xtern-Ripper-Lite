@@ -7,6 +7,7 @@
 #include "OutputChannel.h"
 #include "ADCCfg.h"
 #include "Watchdog.h"
+#include "TailKey.h"
 
 //内部SFR
 sbit RevPGate=RevProtIOP^RevProtIOx; //反接保护MOSFET
@@ -51,12 +52,11 @@ void OutputChannel_TestRun(void)
 	//检查是否由看门狗导致复位	
 	if(GetIfWDogCauseRST())	
 		{
-		ErrCode=Fault_MPUHang; //指示故障由单片机死机导致
-		if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //指示故障发生
+		ReportError(Fault_MPUHang); //指示故障由单片机死机导致
 		return;
 		}
 	//准备启动输出
-	if(Data.RawBattVolt<5.5)return; //输入电压过低避免误报，跳过检测
+	if(Data.RawBattVolt<5.5||CurrentMode->ModeIdx!=Mode_OFF)return; //输入电压过低避免误报，或者上次关机前没有熄灯，为了尽快点亮跳过检测
 	LShuntSEL=0;
 	HShuntSEL=0;
 	RevPGate=0; //关闭防反接检测PIN
@@ -67,7 +67,7 @@ void OutputChannel_TestRun(void)
 		{
 		delay_ms(5);
 		SystemTelemHandler();
-	  if(Data.OutputVoltage>7.1)break; //输出电压正常
+	  if(Data.OutputVoltage>4.2)break; //输出电压正常
 		retry--;
 		}
 	while(retry>0);
@@ -75,8 +75,7 @@ void OutputChannel_TestRun(void)
 	if(retry==0)
 		{
 		DCDCEN=0; //令DCDCEN=0
-	  ErrCode=Fault_DCDCFailedToStart;
-		if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //指示故障发生
+	  ReportError(Fault_DCDCFailedToStart); //报告错误
 	  return;
 		}
 	//进行输出EN控制的检测
@@ -103,11 +102,7 @@ void OutputChannel_TestRun(void)
 		}
 	while(retry>0);
 	//DCDC停止失败，EN不受控，报错
-	if(retry==0)
-		{
-	  ErrCode=Fault_DCDCENOOC;
-		if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //指示故障发生
-		}
+	if(retry==0)ReportError(Fault_DCDCENOOC);
 	}	
 	
 //输出通道进入休眠的操作
@@ -149,6 +144,7 @@ void OutputChannel_Calc(void)
 		if(!IsEnableDCDCCounter)DCDCEN=1; //时间到，打开DCDC
 		}
 	//避免无效的重复计算
+	if(TailKeyTIM<(TailKeyRelTime+1))Current=0; //当前进入掉电模式，立即关闭输出
 	if(CurrentBuf==Current)return;
 	CurrentBuf=Current;
 	//电流小于等于0，关闭所有输出
@@ -168,7 +164,7 @@ void OutputChannel_Calc(void)
 	else if(CurrentBuf<AUXChannelImax)
 		{
 		PWMDuty=Duty_Calc(AUXChannelShuntmOhm,CurrentBuf,LowShuntIOffset);
-		RevPGate=Data.RawBattVolt<9.5?1:0;   //低输出电流且输入功率不大时下关闭防反接FET节省能量
+		RevPGate=0;   //输入功率不大时下关闭防反接FET节省能量
 		if(!DCDCEN)IsEnableDCDCCounter=PWMDACSettleDelay; //如果当前DCDC是关闭状态则延时一段时间再打开
 		LShuntSEL=1;  
 		HShuntSEL=0;  //启动DCDC，选择低量程通道
@@ -179,8 +175,7 @@ void OutputChannel_Calc(void)
 		{
 		PWMDuty=Duty_Calc(MainChannelShuntmOhm,CurrentBuf,HighShuntIOffset);
 		RevPGate=1;   //主输出启用，打开防反接FET提高能效
-		if(CurrentMode->ModeIdx==Mode_Strobe)DCDCEN=1; //爆闪模式需要很快的响应速度所以直接打开DCDC
-		else if(!DCDCEN)IsEnableDCDCCounter=PWMDACSettleDelay; //其余挡位则延时一段时间再打开
+		DCDCEN=1; 
 		LShuntSEL=0;  
 		HShuntSEL=1;  //启动DCDC，选择高量程通道
 		IsNeedToUploadPWM=1; //需要更新PWM输出

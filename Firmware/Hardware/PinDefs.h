@@ -36,6 +36,11 @@
 #define VOUTFBIOx GPIO_PIN_3
 #define VOUTFBAIN 6
 
+//运放恒流状态反馈引脚(P3.2,AN14)
+#define OPFBIOG 3
+#define OPFBIOx GPIO_PIN_2
+#define OPFBAIN 14
+
 //电池电压检测引脚(P0.0,AN0)
 #define VBATInputIOG 0
 #define VBATInputIOx GPIO_PIN_0
@@ -45,11 +50,10 @@
 #define NTCENIOG 3
 #define NTCENIOx GPIO_PIN_0
 
-//电池节数设置引脚(P2.2)
-#define BATTSELIOP GPIO_PORT_2
+//电池节数设置引脚(P2.2,AN8)
 #define BATTSELIOG 2
 #define BATTSELIOx GPIO_PIN_2
-
+#define BATTSELAIN 8
 
 //红色指示灯(P2.4)	
 #define RedLEDIOP GPIO_PORT_2

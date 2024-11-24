@@ -11,6 +11,8 @@ typedef struct
 	float BatteryVoltage; //等效单节电池电压(V)
 	float RawBattVolt; //原始的电池电压(V)
 	float MCUVDD; //单片机的VDD
+	float FBInjectVolt; //FB注入运放的输出电压(用于判断是否恒流)
+	int CfgStrapRes; //配置电阻阻值
 	bool IsNTCOK; //NTC是否OK
 	}ADCResultStrDef;
 
@@ -39,6 +41,7 @@ typedef struct
 #define VBattUpperResK 680
 #define VBattLowerResK 100 //电池检测分压的上下拉电阻
 #define NTCUpperResValueK 330 //NTC热敏电阻的上拉阻值
+#define VStrapUpperResValueK 200 //配置电阻的上拉阻值
 
 //电池检测配置
 #define VBattAvgCount 300 //等效单节电池电压数据的平均次数(用于内部逻辑的低压保护,电量显示和电量不足跳档)

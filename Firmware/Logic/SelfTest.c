@@ -3,12 +3,20 @@
 #include "ADCCfg.h"
 #include "ModeControl.h"
 #include "OutputChannel.h"
+#include "TailKey.h"
+#include "Strap.h"
 
 //内部变量
 static xdata int ErrDisplayIndex;
 static xdata char ShortDetectTIM;
-xdata float VBattBeforeTurbo;
 xdata char InputDetectTIM;
+
+//报告错误
+void ReportError(FaultCodeDef Code)
+	{
+	ErrCode=Code;
+	if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //指示故障发生
+	}
 
 //错误ID显示计时函数	
 void DisplayErrorTIMHandler(void)	
@@ -43,44 +51,38 @@ void DisplayErrorIDHandler(void)
   else LEDMode=LED_OFF; //LED熄灭
 	}
 	
-//输入压环接触不良检测	
-void InputFaultDetect(void)
-	{
-	if(CurrentMode->ModeIdx!=Mode_Turbo)InputDetectTIM=0; //非极亮模式，关闭该功能
-	else if(InputDetectTIM<10) //进行采样
-		{
-		InputDetectTIM++;
-		if((VBattBeforeTurbo-Data.RawBattVolt)<3.2)return; //电池压降还算合理
-		ErrCode=Fault_InputConnectFailed; //电池压降过高说明输入可能存在虚接，触发故障
-    if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //指示故障发生
-		}
-	}	
-	
 //输出故障检测
 void OutputFaultDetect(void)
 	{
-	char buf;
-	if(CurrentMode->ModeIdx==Mode_OFF)ShortDetectTIM=0; //关机状态复位检测
+	char buf,OErrID;
+	bit IsLED6V;
+	if(CurrentMode->ModeIdx==Mode_OFF||TailKeyTIM<(TailKeyRelTime+1))ShortDetectTIM=0; //关机状态复位检测
 	else if(Current>0) //开始检测
-		{
-		buf=ShortDetectTIM&0x7F; //取出定时器值
-		if(Data.OutputVoltage<4.5) //输出短路
+		{		
+		buf=ShortDetectTIM&0x0F; //取出定时器值					
+		IsLED6V=Data.OutputVoltage>4.2?1:0;//LED类型检测
+		//短路检测	
+		if(Data.OutputVoltage<2.1||Data.FBInjectVolt>4.8) //输出短路
 			{
 			buf=buf<8?buf+2:8; //计时器累计
-			ShortDetectTIM&=0x7F;
+			OErrID=0;
 			}
-		else if(Data.OutputVoltage>7.15) //输出开路
+		//输出开路或者LED类型错误检测
+		else if(Data.FBInjectVolt<0.25||Is6VLED!=IsLED6V) 
 			{
 			buf=buf<8?buf+1:8;  //计时器累计
-			ShortDetectTIM|=0x80;
+			OErrID=Is6VLED!=IsLED6V?2:1;
 			}
-			else buf=buf>0?buf-1:0; //没有发生错误，清除计数器
+		else buf=buf>0?buf-1:0; //没有发生错误，清除计数器
 		//进行定时器数值的回写
-		ShortDetectTIM&=0x80;
-		ShortDetectTIM|=buf;
+		ShortDetectTIM=buf|(OErrID<<4);
 		//状态检测
-		if(buf<8)return; //没有故障
-		ErrCode=ShortDetectTIM&0x80?Fault_DCDCOpen:Fault_DCDCShort; //填写错误代码
-    if(CurrentMode->ModeIdx!=Mode_Fault)SwitchToGear(Mode_Fault);  //指示故障发生
+		if(buf<8)return; //没有故障,跳过执行
+		switch((ShortDetectTIM>>4)&0x0F)	
+			{
+			case 1:ReportError(Fault_DCDCOpen);break;
+			case 2:ReportError(Fault_StrapMismatch);break;
+			default:ReportError(Fault_DCDCShort);
+			}
 		}
 	}

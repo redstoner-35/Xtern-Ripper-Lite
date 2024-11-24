@@ -33,6 +33,7 @@ void SetSystemHBTimer(bit IsEnable)
 	T2CON=0x91; //设置T2时钟源为fSys/24=1MHz，定时器立即启动
 	}
 
+#ifdef EnableHBCheck
 //检查心跳定时器是否就绪
 void CheckIfHBTIMIsReady(void)
 	{
@@ -48,7 +49,8 @@ void CheckIfHBTIMIsReady(void)
 	//定时器等待超时，点亮红色LED
 	while(1); 	
 	}
-
+#endif
+	
 //系统心跳定时器的中断处理	
 void Timer2_IRQHandler(void) interrupt TMR2_VECTOR
 { 
@@ -81,6 +83,7 @@ void delay_init()
 	IE=0x02; //令ET0=1，启用定时中断
 	IE|=0x80; //EA=1，启用全局总中断
 	}
+#ifdef EnableMicroSecDelay
 //uS延迟
 void delay_us(int us)
 	{
@@ -99,7 +102,7 @@ void delay_us(int us)
   if(IsEA)IE|=0x82;
 	else IE|=0x02;
 	}
-	
+#endif
 //1ms延时
 void delay_ms(int ms)
 	{

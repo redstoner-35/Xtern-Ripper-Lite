@@ -19,7 +19,7 @@ typedef struct
 	}ADCConvertTemp;
 
 //ADC异步引擎配置
-#define ADCConvertQueueDepth 4 //ADC转换任务队列深度	
+#define ADCConvertQueueDepth 6 //ADC转换任务队列深度	
 #define ADCAverageCount 10 //ADC对于每个转换任务的平均次数	
 
 //ADC转换引擎的队列配置
@@ -30,6 +30,8 @@ code char ADCChQueue[ADCConvertQueueDepth]=
 	{
 	ADC_INTVREFCh, //先转换VREF
 	NTCInputAIN,//然后转换温度	
+	BATTSELAIN, //转换配置strap
+	OPFBAIN, //FB注入恒流运放的输出电压
 	VBATInputAIN, //电池电压
 	VOUTFBAIN //最后转换输出电压
 	};

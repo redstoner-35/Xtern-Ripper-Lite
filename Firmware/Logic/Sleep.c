@@ -9,6 +9,7 @@
 #include "ADCCfg.h"
 #include "LEDMgmt.h"
 #include "Watchdog.h"
+#include "TailKey.h"
 
 //外部引用
 extern volatile int SleepTimer;
@@ -17,7 +18,7 @@ void BatteryTelemHandler(void);
 bit IsWakupFromSleep=0; //从睡眠阶段唤醒
 
 //禁用/启用所有系统外设
-static void SystemPeripheralCTRL(bit IsEnable)
+void SystemPeripheralCTRL(bit IsEnable)
 	{
 	if(IsEnable)
 		{
@@ -26,8 +27,8 @@ static void SystemPeripheralCTRL(bit IsEnable)
 		PWM_Init(); //初始化PWM发生器
 		OutputChannel_Init(); //初始化输出通道
 		VshowFSMState=BattVdis_Waiting; //复位为休眠状态
-		LEDMgmt_SwitchToPWM(); //把侧按管理器切换为PWM状态
 		WDog_Init(); //启动看门狗
+		TailKey_Init(); //打开比较器
 		return;
 		}
 	//关闭所有外设
@@ -55,6 +56,7 @@ void SleepMgmt(void)
 		return; //时间未到，继续计时
 		}
 	//立即进入睡眠阶段
+	C0CON0=0; //侧按关机后关闭比较器
 	SystemPeripheralCTRL(0);//关闭所有外设
 	STOP();  //令STOP=1，使单片机进入睡眠
 	//系统已唤醒，立即开始检测

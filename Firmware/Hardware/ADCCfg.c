@@ -17,6 +17,7 @@ xdata bool IsNotAllowAsync;	 //是否允许ADC引擎运行在异步模式
 //向ADC提交任务	
 static void ADC_SubmitMisson(char Ch)	
 	{
+	unsigned char i=255;
 	//检查传入的通道参数是否合法
 	if(ADCTemp.IsMissionProcessing)return;
 	if(ADC_CheckIfChInvalid(Ch))return; 
@@ -31,7 +32,7 @@ static void ADC_SubmitMisson(char Ch)
 	ADCON1&=0xF0;
 	ADCON1|=(Ch&0x0F); //设置ADCHS[3:0]					
 	//启动转换
-	delay_us(150);  
+	while(--i);  //延时等待通道选通后开始采样
 	ADC_StartConv();
 	}	
 
@@ -79,6 +80,10 @@ static void ADC_WriteOutputBuf(int ADCResult,char Ch)
 	//状态机
   switch(Ch)
 		{
+		//计算FB注入运放的输出电压
+		case OPFBAIN:
+			Data.FBInjectVolt=Vadc; 
+		  break;
 		//计算参考电压
 		case ADC_INTVREFCh:
 			Buf=ADCBGVREF*(float)4096/(float)ADCResult;
@@ -97,9 +102,13 @@ static void ADC_WriteOutputBuf(int ADCResult,char Ch)
 			Data.OutputVoltage=Vadc/Buf; //根据分压系数反推出DCDC输出电压
 			if(Data.OutputVoltage<3.0)Data.OutputVoltage-=0.1; //进行修正			
 		  break;
+	  //计算配置电阻阻值
+		case BATTSELAIN:
+			Rt=((float)VStrapUpperResValueK*Vadc)/(Data.MCUVDD-Vadc);//得到配置电阻阻值
+			Data.CfgStrapRes=(int)Rt; //将计算出的阻值(KΩ)转换为整数
     //计算温度
 		case NTCInputAIN:
-			Rt=((float)NTCUpperResValueK*Vadc)/(Data.MCUVDD-Vadc);//得到NTC+单片机IO导通电阻的传感器温度值
+			Rt=((float)NTCUpperResValueK*Vadc)/(Data.MCUVDD-Vadc);//得到NTC+单片机IO导通电阻的传感器阻值
 			Rt*=1000; //将阻值从K欧转为Ω
 			NTCRES=(unsigned long)Rt; //取整
 			Data.Systemp=CalcNTCTemp(&Data.IsNTCOK,NTCRES); //计算温度
@@ -147,7 +156,7 @@ static void ADCEngineHandler(void)
       case ADC_WaitMissionDone:
           if(!ADC_ReadBackResult(&result,&Ch))break; //尝试读取结果，转换未完成则继续
 			    ADC_WriteOutputBuf(result,Ch);
-			    for(i=0;i<4;i++)if(ADCConvertQueue[i]==Ch)ADCConvertQueue[i]=-2; //将当前已经完成转换的任务通道设置为-2标记转换完毕
+			    for(i=0;i<ADCConvertQueueDepth;i++)if(ADCConvertQueue[i]==Ch)ADCConvertQueue[i]=-2; //将当前已经完成转换的任务通道设置为-2标记转换完毕
 			    ADCState=ADC_SubmitChFromQueue; //重新回到提交任务的阶段
 			    break;
 			//所有任务已完成
@@ -192,18 +201,17 @@ void ADC_DeInit(void)
 	//将GPIO设置为普通模式
   GPIO_SetMUXMode(NTCInputIOG,NTCInputIOx,GPIO_AF_GPIO);
 	GPIO_SetMUXMode(VOUTFBIOG,VOUTFBIOx,GPIO_AF_GPIO);
-	GPIO_SetMUXMode(VBATInputIOG,VBATInputIOx,GPIO_AF_GPIO);	
 	//设置为推挽输出
 	ADCDeInitCfg.Mode=GPIO_Out_PP;
   ADCDeInitCfg.Slew=GPIO_Slow_Slew;		
 	ADCDeInitCfg.DRVCurrent=GPIO_Low_Current; //配置为低电流推挽输出
 	GPIO_ConfigGPIOMode(NTCInputIOG,GPIOMask(NTCInputIOx),&ADCDeInitCfg); 
   GPIO_ConfigGPIOMode(VOUTFBIOG,GPIOMask(VOUTFBIOx),&ADCDeInitCfg); 
-  GPIO_ConfigGPIOMode(VBATInputIOG,GPIOMask(VBATInputIOx),&ADCDeInitCfg); //设置对应的输出
+  GPIO_ConfigGPIOMode(BATTSELIOG,GPIOMask(BATTSELIOx),&ADCDeInitCfg); 
 	//全部输出0
+  GPIO_WriteBit(BATTSELIOG,BATTSELIOx,0);
   GPIO_WriteBit(NTCInputIOG,NTCInputIOx,0);
 	GPIO_WriteBit(VOUTFBIOG,VOUTFBIOx,0);
-	GPIO_WriteBit(VBATInputIOG,VBATInputIOx,0);
 	GPIO_WriteBit(NTCENIOG,NTCENIOx,0); //令供电输出=0关闭NTC电源
 	}
 
@@ -216,10 +224,12 @@ void ADC_Init(void)
   ADCInitCfg.Slew=GPIO_Slow_Slew;		
 	ADCInitCfg.DRVCurrent=GPIO_Low_Current; //配置为浮空输入	
 	
-  GPIO_ConfigGPIOMode(VOUTFBIOG,GPIOMask(VOUTFBIOG),&ADCInitCfg); //将对应的IO设置为下拉输入
+	GPIO_ConfigGPIOMode(BATTSELIOG,GPIOMask(BATTSELIOx),&ADCInitCfg); 
+  GPIO_ConfigGPIOMode(VOUTFBIOG,GPIOMask(VOUTFBIOG),&ADCInitCfg); //将对应的IO设置为指定模式
 	GPIO_ConfigGPIOMode(VBATInputIOG,GPIOMask(VBATInputIOx),&ADCInitCfg); 
 	GPIO_ConfigGPIOMode(NTCInputIOG,GPIOMask(NTCInputIOx),&ADCInitCfg); 	
 		
+	GPIO_SetMUXMode(BATTSELIOG,BATTSELIOx,GPIO_AF_Analog);
   GPIO_SetMUXMode(NTCInputIOG,NTCInputIOx,GPIO_AF_Analog);
 	GPIO_SetMUXMode(VOUTFBIOG,VOUTFBIOx,GPIO_AF_Analog);
 	GPIO_SetMUXMode(VBATInputIOG,VBATInputIOx,GPIO_AF_Analog); //将GPIO复用设置为模拟输入

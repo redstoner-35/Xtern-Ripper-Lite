@@ -3,16 +3,6 @@
 
 #include "stdbool.h"
 
-typedef enum
-	{
-	MoonLight_10mA,
-	MoonLight_25mA,
-	MoonLight_50mA,
-	MoonLight_100mA,
-	MoonLight_200mA,
-	MoonLight_UsingModeDef,
-	}MoonLightBrightnessDef;	
-
 typedef struct
 	{
 	int Current;
@@ -31,13 +21,14 @@ typedef enum
 	Fault_DCDCOpen,  //LED开路 ID:4
 	Fault_NTCFailed, //NTC故障 ID:5
 	Fault_OverHeat, //过热故障 ID:6
-	Fault_InputConnectFailed, //输入虚接报警 ID:7
-	Fault_MPUHang, //单片机死机导致看门狗触发复位 ID:8
+	Fault_MPUHang, //单片机死机导致看门狗触发复位 ID:7
+	Fault_StrapResistorError, //配置电阻开路或阻值异常 ID:8
+	Fault_StrapMismatch, //配置电阻的LED类型和实际不符 ID:9
 	}FaultCodeDef;	
 	
 typedef enum
 	{
-	Mode_OFF, //关机
+	Mode_OFF=0, //关机
 	Mode_Fault, //出现错误
 		
 	Mode_Ramp, //无极调光
@@ -79,8 +70,6 @@ extern xdata ModeIdxDef LastMode; //上一个挡位
 extern RampConfigDef RampCfg; //无极调光配置	
 extern bit IsRampEnabled; //是否启用无极调光	
 extern xdata FaultCodeDef ErrCode; //错误代码
-extern xdata MoonLightBrightnessDef MoonCfg; //月光模式配置	
-extern xdata float TargetCurrent; //挡位状态机计算出的目标电流	
 	
 //参数配置
 #define BatteryAlertDelay 9 //电池警报延迟	
@@ -97,9 +86,8 @@ void ModeFSMTIMHandler(void);//挡位状态机所需的软件定时器处理
 void ModeSwitchFSM();//挡位状态机	
 int SwitchToGear(ModeIdxDef TargetMode);//换到指定挡位
 void ReturnToOFFState(void);//关机	
-int GetModeCurrentFromIdx(ModeIdxDef TargetMode); //返回电流值	
 void HoldSwitchGearCmdHandler(void); //换挡间隔生成	
 void ModeFSMInit(void); //初始化状态机	
-void MoonConfigHandler(void);	//月光挡位循环配置功能
+void ReportError(FaultCodeDef Code); //报告错误	
 	
 #endif

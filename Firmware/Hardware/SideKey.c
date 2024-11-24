@@ -28,6 +28,7 @@ void SideKeyInit(void)
   GPIO_ConfigGPIOMode(SideKeyGPIOG,GPIOMask(SideKeyGPIOx),&KeyInitCfg);//按键输入
 	GPIO_EnableInt(SideKeyGPIOG,GPIOMask(SideKeyGPIOx)); //使能中断功能
 	GPIO_SetExtIntMode(SideKeyGPIOG,SideKeyGPIOx,GPIO_Int_Falling);//设置为下降沿触发
+	EIP1|=0x04; //将按键中断设置为高优先级
 	//初始化结构体内容和定时器
 	SleepTimer=SleepTimeOut*8;//复位定时器
 	KeyState=0xFF;

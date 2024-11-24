@@ -31,11 +31,6 @@ extern bit IsBatteryFault; //电池低电量故障发生
 extern xdata float Battery; //滤波之后的电池电压
 extern xdata BattVshowFSMDef VshowFSMState; //状态机状态	
 
-//电池识别配置
-#define EnableStrapConfig //开启基于P2.2的配置电阻配置节数的功能
-#define ManualCellCount 2 //当禁用基于Strap的识别时手动指定电池节数（根据Strap识别时该宏参数无效） 
-
-	
 //函数
 void BattDisplayTIM(void); //电池电量显示函数处理
 void TriggerVshowDisplay(void); //启动电池电压显示

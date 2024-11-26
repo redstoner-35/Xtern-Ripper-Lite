@@ -28,7 +28,7 @@ PowerPortNamesTakePriority=0
 PushECOToAnnotationFile=1
 DItemRevisionGUID=
 ReportSuppressedErrorsInMessages=0
-OutputPath=
+OutputPath=Project Outputs for Xtern-Ripper Lite
 LogFolderPath=
 ManagedProjectGUID=
 
@@ -69,6 +69,23 @@ ClassGenNCAutoScope=None
 DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=XHFUXCPF
+
+[Document3]
+DocumentPath=output.Cam
+AnnotationEnabled=1
+AnnotateStartValue=1
+AnnotationIndexControlEnabled=0
+AnnotateSuffix=
+AnnotateScope=All
+AnnotateOrder=-1
+DoLibraryUpdate=1
+DoDatabaseUpdate=1
+ClassGenCCAutoEnabled=1
+ClassGenCCAutoRoomEnabled=1
+ClassGenNCAutoScope=None
+DItemRevisionGUID=
+GenerateClassCluster=0
+DocumentUniqueId=
 
 [Configuration1]
 Name=Default Configuration
@@ -117,7 +134,7 @@ SCH_HasExpandLogicalToPhysicalSheets=-1
 SaveSettingsToOutJob=0
 
 [Generic_EDE]
-OutputDir=
+OutputDir=Project Outputs for Xtern-Ripper Lite
 
 [OutputGroup1]
 Name=Netlist Outputs

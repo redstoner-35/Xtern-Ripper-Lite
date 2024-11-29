@@ -151,11 +151,12 @@ void DisplayVBattAtStart(void)
 	{
 	int i;
 	//提前更新电池电量状态
-	SystemTelemHandler();
 	if(Data.BatteryVoltage<2.9)BattState=Battery_VeryLow; //电池电压低于2.8，直接报告严重不足
 	else if(Data.BatteryVoltage<3.2)BattState=Battery_Low; //电池电压低于3.2则切换到电量低的状态
 	else if(Data.BatteryVoltage<3.6)BattState=Battery_Mid; //电池电量低于3.5则表示为中等
 	else BattState=Battery_Plenty; //电量充足
+	//电池电压过高，触发保护	
+	if(Data.BatteryVoltage>4.3)ReportError(Fault_InputOVP); //输入过压保护
 	//清除电池故障和警告位	
 	IsBatteryAlert=0;
 	IsBatteryFault=0;
@@ -218,7 +219,7 @@ void BatteryTelemHandler(void)
 	else AlertThr=(float)(CurrentMode->LowVoltThres)/(float)1000; //从当前目标挡位读取模式值  
 	IsBatteryFault=Battery>2.7?0:1; //故障bit
 	if(IsBatteryFault)IsBatteryAlert=0; //故障bit置起后强制清除警报bit
-	else if((Data.OutputVoltage/Data.RawBattVolt)>0.87)IsBatteryAlert=1; //输出输入比值大于86%，DCDC芯片已经饱和，强制降档
+	else if((Data.OutputVoltage/Data.RawBattVolt)>0.85)IsBatteryAlert=1; //输出输入比值大于86%，DCDC芯片已经饱和，强制降档
 	else IsBatteryAlert=Battery>AlertThr?0:1; //警报bit
 	//电池电量指示状态机
 	switch(BattState) 

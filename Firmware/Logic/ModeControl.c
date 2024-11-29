@@ -477,7 +477,7 @@ void ModeSwitchFSM(void)
 		TailMemory_Save(CurrentMode->ModeIdx);
 		}
 	//状态机
-	if(ErrCode==Fault_DCDCFailedToStart||ErrCode==Fault_DCDCENOOC||ErrCode==Fault_StrapResistorError)return; //致命初始化错误
+	if(ErrCode==Fault_DCDCFailedToStart||ErrCode==Fault_DCDCENOOC||ErrCode==Fault_StrapResistorError||ErrCode==Fault_InputOVP)return; //致命初始化错误
 	else switch(CurrentMode->ModeIdx)	
 		{
 		//出现错误	

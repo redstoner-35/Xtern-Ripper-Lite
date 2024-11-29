@@ -18,12 +18,13 @@ typedef enum
 	Fault_DCDCFailedToStart, //DCDC无法启动 ID:1
 	Fault_DCDCENOOC, //DCDC使能信号不受控 ID:2
 	Fault_DCDCShort, //DCDC输出短路  ID:3
-	Fault_DCDCOpen,  //LED开路 ID:4
-	Fault_NTCFailed, //NTC故障 ID:5
-	Fault_OverHeat, //过热故障 ID:6
-	Fault_MPUHang, //单片机死机导致看门狗触发复位 ID:7
+	Fault_InputOVP, //输入过压保护 ID:4
+	Fault_DCDCOpen,  //LED开路 ID:5
+	Fault_NTCFailed, //NTC故障 ID:6
+	Fault_OverHeat, //过热故障 ID:7
 	Fault_StrapResistorError, //配置电阻开路或阻值异常 ID:8
 	Fault_StrapMismatch, //配置电阻的LED类型和实际不符 ID:9
+	Fault_MPUHang //单片机死机导致看门狗触发复位 ID:10
 	}FaultCodeDef;	
 	
 typedef enum

@@ -1,6 +1,7 @@
 #include "LEDMgmt.h"
 #include "delay.h"
 #include "ADCCfg.h"
+#include "BattDisplay.h"
 #include "ModeControl.h"
 #include "OutputChannel.h"
 #include "TailKey.h"
@@ -35,13 +36,12 @@ void DisplayErrorIDHandler(void)
 	{
 	int buf;
 	//先导提示红黄绿交替闪
-  if(ErrDisplayIndex<5)switch(ErrDisplayIndex) 
+  if(ErrDisplayIndex<5)
 		{
-		case 0:LEDMode=LED_Green;break;
-		case 1:LEDMode=LED_Amber;break;
-		case 2:LEDMode=LED_Red;break;
-		default:LEDMode=LED_OFF;
+		if(ErrDisplayIndex<3)LEDMode=(LEDStateDef)(ErrDisplayIndex+1);	
+		else LEDMode=LED_OFF;
 		}
+	//闪烁指定次数显示Err ID
 	else if(ErrDisplayIndex<(5+(6*(int)ErrCode)))
 		{
 		buf=(ErrDisplayIndex-5)/3; 
@@ -61,6 +61,8 @@ void OutputFaultDetect(void)
 		{		
 		buf=ShortDetectTIM&0x0F; //取出定时器值					
 		IsLED6V=Data.OutputVoltage>4.2?1:0;//LED类型检测
+		//输入过压保护
+		if(Data.BatteryVoltage>4.4)ReportError(Fault_InputOVP); 
 		//短路检测	
 		if(Data.OutputVoltage<2.1||Data.FBInjectVolt>4.8) //输出短路
 			{

@@ -9,21 +9,20 @@
 static u8 PEC8Check(char *DIN,long Len)
 {
  unsigned char crcbuf=0x00;
- long i,ptr=0;
- while(Len>0)
- {
+ char i;
+ do
+	{
   //载入数据
-  crcbuf=crcbuf^DIN[ptr];
+  crcbuf^=*DIN++;
   //计算
-  for(i=8;i>0;i--)
+	i=8;
+  for(i=8;i;i--)
    {
 	 if(crcbuf&0x80)crcbuf=(crcbuf<<1)^0x07;//最高位为1，左移之后和多项式XOR
-	 else crcbuf=crcbuf<<1;//最高位为0，只移位不XOR
+	 else crcbuf<<=1;//最高位为0，只移位不XOR
 	 }
-	//计算完一轮，指向下一个数据
-	ptr++;
-	Len--;
- }
+	}
+ while(--Len);
  //输出结果
  return crcbuf;
 }

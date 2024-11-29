@@ -257,7 +257,6 @@ void ADC_Init(void)
 	ADCTemp.Ch=0;
 	ADCTemp.IsMissionProcessing=false;
 	IsNotAllowAsync=true; //初始化时禁止异步功能	
-	//获取一遍初始的系统数据
-	ADC_EnableCmd(); //使能ADC模块
-  SystemTelemHandler();
+	//ADC配置完毕，使能ADC模块
+	ADC_EnableCmd(); 
 	}	

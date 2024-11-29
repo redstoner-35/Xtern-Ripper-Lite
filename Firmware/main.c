@@ -27,13 +27,13 @@ void main()
  	delay_init();	 //延时函数初始化
 	SetSystemHBTimer(1);//启用系统心跳8Hz定时器	
 	//初始化外设
-	LED_Init(); //初始化侧按LED
 	ADC_Init(); //初始化ADC
-	CheckNTCStatus(); //检查NTC状态
 	Strap_Init(); //读取驱动的配置电阻
+	TailKey_Init(); //尾部初始化
+	LED_Init(); //初始化侧按LED
+	CheckNTCStatus(); //检查NTC状态
 	ModeFSMInit(); //初始化挡位状态机
   SideKeyInit(); //侧按初始化
-	TailKey_Init(); //尾部初始化
 	PWM_Init(); //启动PWM定时器	
 	OutputChannel_Init(); //启动输出通道	
 	TailMemory_Recall(); //获取尾部上次关机前的挡位

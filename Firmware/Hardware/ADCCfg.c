@@ -93,14 +93,16 @@ static void ADC_WriteOutputBuf(int ADCResult,char Ch)
 		case VBATInputAIN:
 			Buf=(float)VBattLowerResK/(float)(VBattLowerResK+VBattUpperResK);//计算出分压电阻的系数
 			Data.RawBattVolt=Vadc/Buf; //根据分压系数反推出电池电压
-			if(Data.RawBattVolt<3.0)Data.RawBattVolt-=0.1; //进行修正
 		  Data.BatteryVoltage=Data.RawBattVolt/(float)VbattCellCount; //将3节电池的总电压转换为单节电池的电压
 		  break;
 	  //计算输出电压
 		case VOUTFBAIN:		
 			Buf=(float)VoutLowerResK/(float)(VoutLowerResK+VoutUpperResK);//计算出分压电阻的系数
 			Data.OutputVoltage=Vadc/Buf; //根据分压系数反推出DCDC输出电压
-			if(Data.OutputVoltage<3.0)Data.OutputVoltage-=0.1; //进行修正			
+			Buf=(Data.OutputVoltage/Data.RawBattVolt)*100; //计算输入输出压差
+		  Data.VOUTRatio=(char)Buf;
+		  if(Data.VOUTRatio>100)Data.VOUTRatio=100;
+	    if(Data.VOUTRatio<0)Data.VOUTRatio=0; //计算百分比并限幅
 		  break;
 	  //计算配置电阻阻值
 		case BATTSELAIN:

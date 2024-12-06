@@ -8,7 +8,6 @@
 #include "BattDisplay.h"
 #include "ADCCfg.h"
 #include "LEDMgmt.h"
-#include "Watchdog.h"
 #include "TailKey.h"
 
 //外部引用
@@ -27,12 +26,10 @@ void SystemPeripheralCTRL(bit IsEnable)
 		PWM_Init(); //初始化PWM发生器
 		OutputChannel_Init(); //初始化输出通道
 		VshowFSMState=BattVdis_Waiting; //复位为休眠状态
-		WDog_Init(); //启动看门狗
 		TailKey_Init(); //打开比较器
 		return;
 		}
 	//关闭所有外设
-	WDog_DeInit(); //禁止看门狗定时器
 	SetSystemHBTimer(0); //禁用心跳定时器
 	PWM_DeInit();
 	ADC_DeInit(); //关闭PWM和ADC

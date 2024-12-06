@@ -22,5 +22,6 @@ void OutputChannel_Init(void);
 void OutputChannel_Calc(void);
 void OutputChannel_DeInit(void);
 void OutputChannel_TestRun(void);
+float Duty_Calc(float ShuntmOhm,int Current,float Offset); //º∆À„’ºø’±»
 
 #endif

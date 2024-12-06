@@ -11,12 +11,17 @@
 
 //内部全局变量
 static xdata char TailKeyCount=0; //尾部按键按下的次数
-static char TailSenTIM=0; //延时启用尾部检测的定时器
+static char TailSenTIM; //延时启用尾部检测的定时器
 static bit IsTailKeyPressed=0;
+bit IsPOSTKPressed=0; //正向尾按是否按下
 static volatile unsigned char IsEnterLowPowerMode=0xFF;
 
 //外部引用变量
+#ifndef EnableMechTailKey
+char TailKeyTIM=TailKeyRelTime+1;
+#else
 char TailKeyTIM;
+#endif
 
 #ifdef EnableMechTailKey
 //比较器中断
@@ -36,39 +41,60 @@ void ACMP_IRQHandler(void)  interrupt ACMP_VECTOR
 static void EnableTailDetect(void)
 	{
 	C0CON0|=0x80; //令C0EN=1，比较器开始运行
-	delay_ms(5); 
-	CNIF=0; //延迟10mS后再清除Flag（打开比较器中断前需要清除Flag）
+	delay_ms(20); 
+	CNIF=0; //延迟20mS后再清除Flag（打开比较器中断前需要清除Flag）
 	CNIE=0x01; //使能ACMP0中断，尾按检测激活
 	}
 #endif
-//尾部开关所需要的模拟比较器初始化,以及正向开关检测
-void TailKey_Init(void)
+	
+void TailKey_Init(void)	
 	{
-	#ifdef EnableMechTailKey
-	char wait;
-	extern bit IsPosTailKey;
-	//配置比较器ACMP0
   C0CON0=0x09; //比较器调节模式禁止，正输入为C0P1，负输入为内部REF	
 	C0CON2=0x19; //比较器配置为使能滤波功能，滤波时间常数为256*1/48MHz=5.33uS，正输出极性
 	C0HYS=0x00; //禁用迟滞
 	CNVRCON=0x38; //比较器负向输入的基准电压为内部1.2V带隙基准按照10/20比例分压得到0.6V
 	CNFBCON=0x05; //使能比较器0的刹车功能，在负边沿时禁止PWM输出
 	EIP1=0x80; //比较器中断必须实时响应所以设置为极高优先级
-		
+	}
+
+//尾部开关所需要的模拟比较器初始化,以及正向开关检测(上电的时候用的)
+void TailKey_POR_Init(void)
+	{
+	#ifdef EnableMechTailKey
+	unsigned char wait;
+	extern bit IsPosTailKey;
+	bit TKState=1;
+	//初始化比较器
+	TailKey_Init();	
 	//使能尾按检测开始检测正向开关的动作
 	if(!IsPosTailKey)return; //配置电阻设置为反向开关，退出检测
-	wait=TailKeyRelTime*30;
-	EnableTailDetect(); 
+	wait=20;
+	C0CON0|=0x80; //令C0EN=1，比较器开始运行
 	do
-		{
-		TailKeyTIM=TailKeyRelTime; //将尾按定时变量设置为松开检测，如果按键按下，则将会进入尾按处理然后清除掉变量，此时重置等待时间
-		delay_ms(5);
-		TailKey_Handler(); //等待响应
-		if(!TailKeyTIM)wait=TailKeyRelTime*30; //尾按按下，响应操作
+		{		
+		//引入延时
+		delay_ms(10);
+		//检测比较器状态
+		IsEnterLowPowerMode<<=1;
+		if(C0CON1&0x80)IsEnterLowPowerMode++;
+		//根据开关状态进行动作	
+		if(IsEnterLowPowerMode==0xFF)
+			{
+			TKState=1;
+			wait--; //尾按正常按下通电，递减计时器
+			}
+    else if(!(IsEnterLowPowerMode&0x1F)) //按键按下足够时间			
+		  {
+			wait=20; //尾按按下，复位定时器
+			if(!TKState)continue; //尾按当前没有通电足够长的时间，不允许判断
+			IsPOSTKPressed=1;
+			IsEnterLowPowerMode=0; //清除按键缓存等待按键确实按下再动作
+			TailKeyCount++; //增加有效的按键次数
+		  TKState=0; //标记开关松开
+			}		
 		}
-	while(--wait);
+	while(wait);
 	//检测完毕后关闭比较器
-	CNIE=0x00; //关闭比较器中断
 	C0CON0&=0x7F; //令C0EN=0，比较器停止运行	
 	#endif
 	}
@@ -117,6 +143,7 @@ void TailKeyCounter(void)
 //尾按逻辑处理	
 void TailKey_Handler(void)
 	{
+	#ifdef EnableMechTailKey
   if(IsEnterLowPowerMode)return;
 	//循环等待按钮重新接通恢复供电
 	do
@@ -130,4 +157,5 @@ void TailKey_Handler(void)
   PWM_Enable(); //重新使能PWM		
 	TailKeyCount++;
 	TailKeyTIM=0;  //尾按按键按下，发生事件复位计时器
+	#endif
 	}

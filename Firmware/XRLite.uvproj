@@ -442,11 +442,6 @@
               <FilePath>.\Hardware\OutputChannel.c</FilePath>
             </File>
             <File>
-              <FileName>Watchdog.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Hardware\Watchdog.c</FilePath>
-            </File>
-            <File>
               <FileName>Flash.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Hardware\Flash.c</FilePath>

@@ -9,7 +9,6 @@
 #include "PWMCfg.h"
 #include "BattDisplay.h"
 #include "ModeControl.h"
-#include "Watchdog.h"
 #include "TailKey.h"
 #include "Strap.h"
 
@@ -28,18 +27,17 @@ void main()
 	SetSystemHBTimer(1);//启用系统心跳8Hz定时器	
 	//初始化外设
 	ADC_Init(); //初始化ADC
+	OutputChannel_Init(); //启动输出通道	
 	Strap_Init(); //读取驱动的配置电阻
-	TailKey_Init(); //尾部初始化
+	TailKey_POR_Init(); //尾部初始化和正向开关检测
 	LED_Init(); //初始化侧按LED
 	CheckNTCStatus(); //检查NTC状态
 	ModeFSMInit(); //初始化挡位状态机
   SideKeyInit(); //侧按初始化
 	PWM_Init(); //启动PWM定时器	
-	OutputChannel_Init(); //启动输出通道	
 	TailMemory_Recall(); //获取尾部上次关机前的挡位
 	OutputChannel_TestRun(); //输出通道试运行
 	DisplayVBattAtStart(); //显示输出电压
-	WDog_Init(); //启动看门狗
 	EnableADCAsync(); //启动ADC的异步模式提高处理速度
 	//主循环	
   while(1)
@@ -56,7 +54,6 @@ void main()
 		//8Hz定时处理
 		if(!SysHBFlag)continue; //时间没到，跳过处理
 		SysHBFlag=0;
-		WDog_Feed(); //喂狗
 		TailKeyCounter(); //计时器
 		BattDisplayTIM(); //电池电量显示TIM
 		ModeFSMTIMHandler(); //模式状态机

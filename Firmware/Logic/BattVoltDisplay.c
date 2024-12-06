@@ -42,15 +42,15 @@ void TriggerVshowDisplay(void)
 static void BatVshowFSM(void)
 	{
 	int buf;
+	extern xdata char VbattCellCount;
 	//电量显示状态机
 	switch(VshowFSMState)
 		{
 		case BattVdis_Waiting:break; //等待显示阶段
 		case BattVdis_PrepareDis: //准备显示
-			LEDMode=LED_OFF; //关闭LED
-			VbattSample=Data.RawBattVolt; //进行电压取样
 	    VshowTIM=14; //延迟1.75秒
-			VshowFSMState=BattVdis_DelayBeforeDisplay; //进行简单的延迟
+			VshowFSMState=BattVdis_DelayBeforeDisplay; //显示头部
+		  break;
 		//延迟并显示开头
 		case BattVdis_DelayBeforeDisplay:
 			if(VshowTIM>12)LEDMode=LED_Green;
@@ -59,7 +59,15 @@ static void BatVshowFSM(void)
 		  else LEDMode=LED_OFF; //红绿蓝闪烁之后等待
 		  //头部显示结束后开始正式显示电压
 		  if(VshowTIM>0)break; //时间未到
-		  buf=(int)VbattSample%100; //去除掉99以上的
+			VbattSample=Data.RawBattVolt; //进行电压取样
+	    if(VbattCellCount==2)VbattSample*=10; //2节电池模式，电压取样乘以10
+		  if(((int)VbattSample)/100)
+				{
+				LEDMode=LED_RedBlinkThird;
+				VshowFSMState=BattVdis_ShowChargeLvl; //电压超出显示范围（用红色闪三次指示）
+				break;
+				}
+		  buf=(int)VbattSample;
 		  buf/=10; //显示十位
 		  if(buf==0)VshowTIM=-1; //0=瞬间闪一下
 			else VshowTIM=(4*buf)-1; //配置显示的时长
@@ -146,6 +154,15 @@ static void BatVshowFSM(void)
 		}
 	}
 
+//复位电池电压检测缓存
+static void ResetBattAvg(void)	
+	{
+	BattVolt.Min=32766;
+	BattVolt.Max=-32766; //复位最大最小捕获器
+	BattVolt.Count=0;
+  BattVolt.AvgBuf=0; //清除平均计数器和缓存
+	}
+
 //在启动时显示电池电压
 void DisplayVBattAtStart(void)
 	{
@@ -155,20 +172,14 @@ void DisplayVBattAtStart(void)
 	else if(Data.BatteryVoltage<3.2)BattState=Battery_Low; //电池电压低于3.2则切换到电量低的状态
 	else if(Data.BatteryVoltage<3.6)BattState=Battery_Mid; //电池电量低于3.5则表示为中等
 	else BattState=Battery_Plenty; //电量充足
-	//电池电压过高，触发保护	
-	if(Data.BatteryVoltage>4.3)ReportError(Fault_InputOVP); //输入过压保护
 	//清除电池故障和警告位	
 	IsBatteryAlert=0;
 	IsBatteryFault=0;
 	//初始化平均值缓存
-	BattVolt.Min=32766;
-	BattVolt.Max=-32766; //复位最大最小捕获器
-	BattVolt.Count=0;
-  BattVolt.AvgBuf=0; //清除平均计数器和缓存
+	ResetBattAvg();
 	Battery=Data.BatteryVoltage; //更新电池电压
   //复位电池电压显示状态机		
-	VbattSample=Data.RawBattVolt; 
-	VshowFSMState=BattVdis_Waiting; //显示状态设置为等待
+	VshowFSMState=BattVdis_Waiting;
 	//启动电池电量显示(仅无错误且上次断电之前是关机状态的情况下)
 	if(CurrentMode->ModeIdx==Mode_OFF)
 		{
@@ -209,17 +220,14 @@ void BatteryTelemHandler(void)
 		BattVolt.AvgBuf-=(long)BattVolt.Min+(long)BattVolt.Max; //去掉最高最低
 		BattVolt.AvgBuf/=(long)(BattVolt.Count-2); //求平均值
 		Battery=(float)BattVolt.AvgBuf/(float)1000; //得到最终的电池电压
-		BattVolt.Min=32766;
-		BattVolt.Max=-32766; //复位最大最小捕获器
-		BattVolt.Count=0;
-		BattVolt.AvgBuf=0; //清除平均计数器和缓存		
+		ResetBattAvg(); //复位缓存
 		}
 	//根据电池电压控制flag实现低电压降档和关机保护
 	if(CurrentMode->ModeIdx==Mode_Ramp)AlertThr=(float)RampCfg.BattThres/(float)1000; //无极调光模式下，使用结构体内的动态阈值
 	else AlertThr=(float)(CurrentMode->LowVoltThres)/(float)1000; //从当前目标挡位读取模式值  
 	IsBatteryFault=Battery>2.7?0:1; //故障bit
 	if(IsBatteryFault)IsBatteryAlert=0; //故障bit置起后强制清除警报bit
-	else if((Data.OutputVoltage/Data.RawBattVolt)>0.85)IsBatteryAlert=1; //输出输入比值大于86%，DCDC芯片已经饱和，强制降档
+	else if(Data.VOUTRatio>75)IsBatteryAlert=1; //输出输入比值大于86%，DCDC芯片已经饱和，强制降档
 	else IsBatteryAlert=Battery>AlertThr?0:1; //警报bit
 	//电池电量指示状态机
 	switch(BattState) 

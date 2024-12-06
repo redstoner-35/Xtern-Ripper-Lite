@@ -13,6 +13,7 @@ typedef struct
 	float MCUVDD; //单片机的VDD
 	float FBInjectVolt; //FB注入运放的输出电压(用于判断是否恒流)
 	int CfgStrapRes; //配置电阻阻值
+	char VOUTRatio; //输入输出电压之间的百分比
 	bool IsNTCOK; //NTC是否OK
 	}ADCResultStrDef;
 

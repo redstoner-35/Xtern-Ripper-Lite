@@ -26,8 +26,6 @@ void TailMemory_Save(ModeIdxDef Mode)
 	{
 	int i;
 	char LastMode,buf;
-	//判断传入的模式值是否有不允许记忆的	
-	if(Mode==Mode_Fault)return;
 	//进行遍历读取
 	SetFlashState(1);
 	for(i=512;i<1020;i++)
@@ -37,6 +35,7 @@ void TailMemory_Save(ModeIdxDef Mode)
 		else LastMode=buf-1; //当前还未抵达最后一个模式		
 		}
 	//比对数据
+	if(Mode==Mode_Fault)Mode=Mode_OFF; //开机时发生故障，回到关机状态
 	if(Mode==Mode_Turbo||Mode==Mode_Strobe||Mode==Mode_SOS)//极亮爆闪和SOS不记忆。使用进入之前的挡位
 		{
 		if(LastMode!=Mode_OFF)Mode=LastMode;

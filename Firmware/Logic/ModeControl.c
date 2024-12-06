@@ -139,13 +139,20 @@ xdata char RampRiseCurrentTIM=0; //无极调光恢复电流的计时器
 void ModeFSMInit(void)
 {
 	char i;
+  extern xdata float StrobeDuty;
 	//初始化无极调光
 	RampCfg.RampMaxDisplayTIM=0;
-  for(i=0;i<ModeTotalDepth;i++)if(ModeSettings[i].ModeIdx==Mode_Ramp)
+  for(i=0;i<ModeTotalDepth;i++)
+	  {
+		//计算爆闪的占空比
+		if(ModeSettings[i].ModeIdx==Mode_Strobe)StrobeDuty=Duty_Calc(MainChannelShuntmOhm,ModeSettings[i].Current,HighShuntIOffset); 
+	  //读取无极调光的数据
+		if(ModeSettings[i].ModeIdx==Mode_Ramp)
 	    {
 			RampCfg.BattThres=ModeSettings[i].LowVoltThres; //低压检测上限恢复
 			RampCfg.CurrentLimit=ModeSettings[i].Current; //找到挡位数据中无极调光的挡位，电流上限恢复
 			}
+		}
 	ReadRampConfig(); //从EEPROM内读取无极调光配置
 	//挡位模式配置
 	SOSState=SOSState_Prepare; //SOS状态机重置为初始值
@@ -465,19 +472,15 @@ void ModeSwitchFSM(void)
 	//外部变量声明
 	extern volatile bit StrobeFlag;
 	extern bit IsForceLeaveTurbo;
+	extern bit IsPOSTKPressed;
 	//获取按键状态
 	TKCount=GetTailKeyCount();
 	IsHoldEvent=getSideKeyLongPressEvent();	
 	ClickCount=getSideKeyShortPressCount(0);	//读取按键处理函数传过来的参数
 	//挡位记忆参数检查和EEPROM记忆
 	if(LastMode==Mode_OFF||LastMode>=ModeTotalDepth)LastMode=Mode_Low;
-	if(TailSaveTIM==24) //在挡位停留的时间足够，保存数据
-		{
-		TailSaveTIM++;
-		TailMemory_Save(CurrentMode->ModeIdx);
-		}
 	//状态机
-	if(ErrCode==Fault_DCDCFailedToStart||ErrCode==Fault_DCDCENOOC||ErrCode==Fault_StrapResistorError||ErrCode==Fault_InputOVP)return; //致命初始化错误
+	if(ErrCode==Fault_DCDCFailedToStart||ErrCode==Fault_DCDCENOOC||ErrCode==Fault_StrapResistorError)return; //致命初始化错误
 	else switch(CurrentMode->ModeIdx)	
 		{
 		//出现错误	
@@ -513,7 +516,7 @@ void ModeSwitchFSM(void)
 					break;
 					}
 		  //非锁定正常单击开关机的事项
-			if(ClickCount==1) //侧按单击开机进入循环
+			if(ClickCount==1||TKCount) //侧按单击开机进入循环
 					{
 				  if(Battery>2.9)SwitchToGear(IsRampEnabled?Mode_Ramp:LastMode); //正常开启
 					else if(Battery>2.7)SwitchToGear(Mode_Moon);	 //大于2.7V的时候只能开月光
@@ -543,7 +546,8 @@ void ModeSwitchFSM(void)
 		//月光状态
 		 case Mode_Moon:
 			 BatteryLowAlertProcess(true,Mode_Moon);
-			 if(ClickCount==1)ReturnToOFFState(); //回到关机状态//侧按单击关机					
+		   EnterTurboStrobe(TKCount,0); //尾按模式下，需要可以一键进入极亮或者爆闪所以加上检测
+			 if(ClickCount==1)ReturnToOFFState(); //回到关机状态				
 			 //电池电压充足，长按进入低亮挡位
 		   if((IsHoldEvent||TKCount==1)&&Battery>2.9)  
 					{
@@ -644,4 +648,11 @@ void ModeSwitchFSM(void)
 	//根据温控的运算结果对输出电流进行限幅
 	getSideKeyShortPressCount(1); //清除按键处理
 	Current=ThermalILIMCalc(TargetCurrent);	
+	//ROM挡位记忆控制
+	if((IsPOSTKPressed&&TKCount>0)||TailSaveTIM==24) //在挡位停留的时间足够或者开机时按下了挡位开关，保存数据
+		{
+		IsPOSTKPressed=0; //复位标记为
+		TailSaveTIM++;
+		TailMemory_Save(CurrentMode->ModeIdx);
+		}
 	}

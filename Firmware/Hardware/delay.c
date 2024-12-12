@@ -59,10 +59,9 @@ void Timer2_IRQHandler(void) interrupt TMR2_VECTOR
 	HBcounter--;
   StrobeFlag=~StrobeFlag;
 	if(HBcounter)return; //时间未到直接退出
+	//时间到，复位分频器并置起Flag
 	HBcounter=4;
-	//时间到,进行处理
 	SysHBFlag=1; //置起flag
-	SideKey_TIM_Callback();//定时器处理
 }		
 	
 //软件延时定时器的中断处理

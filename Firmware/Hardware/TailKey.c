@@ -3,6 +3,7 @@
 #include "GPIO.h"
 #include "delay.h"
 #include "TailKey.h"
+#include "SelfTest.h"
 #include "ADCCfg.h"
 #include "PWMCfg.h"
 
@@ -13,7 +14,7 @@
 static xdata char TailKeyCount=0; //尾部按键按下的次数
 static char TailSenTIM; //延时启用尾部检测的定时器
 static bit IsTailKeyPressed=0;
-bit IsPOSTKPressed=0; //正向尾按是否按下
+volatile bit IsPOSTKPressed=0; //正向尾按是否按下
 static volatile unsigned char IsEnterLowPowerMode=0xFF;
 
 //外部引用变量
@@ -64,16 +65,17 @@ void TailKey_POR_Init(void)
 	unsigned char wait;
 	extern bit IsPosTailKey;
 	bit TKState=1;
-	//初始化比较器
+	//初始化比较器并复位尾按计时器
 	TailKey_Init();	
+	TailKeyTIM=0; 
 	//使能尾按检测开始检测正向开关的动作
 	if(!IsPosTailKey)return; //配置电阻设置为反向开关，退出检测
-	wait=20;
+	wait=28;
 	C0CON0|=0x80; //令C0EN=1，比较器开始运行
 	do
 		{		
 		//引入延时
-		delay_ms(10);
+		delay_ms(7);
 		//检测比较器状态
 		IsEnterLowPowerMode<<=1;
 		if(C0CON1&0x80)IsEnterLowPowerMode++;
@@ -83,9 +85,9 @@ void TailKey_POR_Init(void)
 			TKState=1;
 			wait--; //尾按正常按下通电，递减计时器
 			}
-    else if(!(IsEnterLowPowerMode&0x1F)) //按键按下足够时间			
+    else if(!(IsEnterLowPowerMode&0x1F)) //按键松开足够时间说明是点动操作			
 		  {
-			wait=20; //尾按按下，复位定时器
+			wait=28; //尾按按下，复位定时器
 			if(!TKState)continue; //尾按当前没有通电足够长的时间，不允许判断
 			IsPOSTKPressed=1;
 			IsEnterLowPowerMode=0; //清除按键缓存等待按键确实按下再动作
@@ -94,7 +96,8 @@ void TailKey_POR_Init(void)
 			}		
 		}
 	while(wait);
-	//检测完毕后关闭比较器
+	//检测完毕的后处理
+	if(IsPOSTKPressed)TailKeyTIM=TailKeyRelTime; //尾按有动作输入，将尾按响应定时器配置为在主循环运行到尾按处理后立即响应
 	C0CON0&=0x7F; //令C0EN=0，比较器停止运行	
 	#endif
 	}
@@ -130,7 +133,7 @@ void TailKeyCounter(void)
 		EnableTailDetect();
 		TailSenTIM++;
 		}
-	//尾按开关按下计时
+	//尾按开关按下之后用于监测连续多次按下的计时模块
 	if(TailKeyTIM<TailKeyRelTime)TailKeyTIM++;
 	else if(TailKeyTIM==TailKeyRelTime)
 		{
@@ -144,7 +147,8 @@ void TailKeyCounter(void)
 void TailKey_Handler(void)
 	{
 	#ifdef EnableMechTailKey
-  if(IsEnterLowPowerMode)return;
+	//尾按被禁用或者没有按下，退出处理
+  if(!(C0CON0&0x80)||IsEnterLowPowerMode)return;
 	//循环等待按钮重新接通恢复供电
 	do
 		{

@@ -33,9 +33,9 @@ void LEDControlHandler(void)
 	{
 	char buf;
 	bit IsLEDON;
-	extern bit IsTempLIMActive;
+	extern bit IsThermalStepDown;
 	//短时间熄灭提示降档
-	if(IsTempLIMActive)
+	if(IsThermalStepDown)
 		{
 		if(StepDownTIM<12)StepDownTIM++;
 		else

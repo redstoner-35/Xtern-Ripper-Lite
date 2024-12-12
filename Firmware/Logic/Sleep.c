@@ -21,11 +21,9 @@ void SystemPeripheralCTRL(bit IsEnable)
 	{
 	if(IsEnable)
 		{
-		LED_Init(); //初始化侧按LED
 		ADC_Init(); //初始化ADC
 		PWM_Init(); //初始化PWM发生器
 		OutputChannel_Init(); //初始化输出通道
-		VshowFSMState=BattVdis_Waiting; //复位为休眠状态
 		TailKey_Init(); //打开比较器
 		return;
 		}
@@ -39,7 +37,6 @@ void SystemPeripheralCTRL(bit IsEnable)
 //睡眠管理函数
 void SleepMgmt(void)
 	{
-	int i;
 	//非关机且仍然在显示电池电压的时候定时器复位禁止睡眠
 	if(VshowFSMState!=BattVdis_Waiting||CurrentMode->ModeIdx!=Mode_OFF) 
 		{
@@ -64,18 +61,15 @@ void SleepMgmt(void)
 		{
 		delay_ms(1);
 		SideKey_LogicHandler(); //处理侧按事务
+		//侧按按键的监测定时器处理(使用125mS心跳时钟)
+		if(!SysHBFlag)continue; 
+		SysHBFlag=0;
+		SideKey_TIM_Callback();
 		}
 	while(!IsKeyEventOccurred()); //等待按键唤醒
 	//系统已被唤醒，立即进入工作模式			
 	SystemPeripheralCTRL(1);
-	//进行ADC检查，如果电池电压过低，则立即再度进入停止模式
-	for(i=0;i<3;i++)
-			{
-			SystemTelemHandler(); //获取电压
-			BatteryTelemHandler(); //电池警报
-			if(!IsBatteryFault)break;
-			}
-	if(i==3)SleepTimer=15;//电池电压过低结束显示后立即关闭
-	//所有初始化完毕，启动ADC异步处理模式
+	//所有外设初始化完毕，启动ADC异步处理模式并打开系统中断
 	EnableADCAsync(); 
+	IRQ_ALL_ENABLE(); //打开所有中断
 	}

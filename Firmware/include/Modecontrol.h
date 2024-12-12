@@ -11,21 +11,6 @@ typedef struct
 	char RampMaxDisplayTIM;
 	char CfgSavedTIM;
 	}RampConfigDef;	
-
-typedef enum
-	{
-	Fault_None,    //没有错误发生
-	Fault_DCDCFailedToStart, //DCDC无法启动 ID:1
-	Fault_DCDCENOOC, //DCDC使能信号不受控 ID:2
-	Fault_DCDCShort, //DCDC输出短路  ID:3
-	Fault_InputOVP, //输入过压保护 ID:4
-	Fault_DCDCOpen,  //LED开路 ID:5
-	Fault_NTCFailed, //NTC故障 ID:6
-	Fault_OverHeat, //过热故障 ID:7
-	Fault_StrapResistorError, //配置电阻开路或阻值异常 ID:8
-	Fault_StrapMismatch, //配置电阻的LED类型和实际不符 ID:9
-	Fault_MPUHang //单片机死机导致看门狗触发复位 ID:10
-	}FaultCodeDef;	
 	
 typedef enum
 	{
@@ -63,6 +48,7 @@ typedef struct
 	int LowVoltThres; //低电压检测电压(mV)
 	bool IsModeHasMemory; //是否带记忆
 	bool IsNeedStepDown; //是否需要降档
+	char Offset; //电流值的偏移量(%)
 	}ModeStrDef; 
 
 //外部引用
@@ -70,7 +56,6 @@ extern ModeStrDef *CurrentMode; //当前模式结构体
 extern xdata ModeIdxDef LastMode; //上一个挡位	
 extern RampConfigDef RampCfg; //无极调光配置	
 extern bit IsRampEnabled; //是否启用无极调光	
-extern xdata FaultCodeDef ErrCode; //错误代码
 	
 //参数配置
 #define BatteryAlertDelay 9 //电池警报延迟	
@@ -89,6 +74,5 @@ int SwitchToGear(ModeIdxDef TargetMode);//换到指定挡位
 void ReturnToOFFState(void);//关机	
 void HoldSwitchGearCmdHandler(void); //换挡间隔生成	
 void ModeFSMInit(void); //初始化状态机	
-void ReportError(FaultCodeDef Code); //报告错误	
 	
 #endif

@@ -9,6 +9,7 @@
 
 //外部引用
 extern char TailKeyTIM;
+extern volatile bit IsPOSTKPressed;
 
 //函数
 void TailMemory_Recall(void);

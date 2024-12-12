@@ -15,6 +15,14 @@ volatile int SleepTimer;
 //内部按键检测用的变量
 xdata unsigned char KeyState;
 
+//GPIO2中断回调处理函数
+void Key_IRQHandler(void) interrupt P2EI_VECTOR 
+  {
+	//侧按中断触发，响应中断
+	SideKey_Int_Callback();  //进行按键响应
+  ClearKeyIntFlag();//清除按键响应的Flag
+	}
+
 //初始化侧按键
 void SideKeyInit(void)
   {
@@ -105,7 +113,7 @@ void SideKey_Int_Callback(void)
 		}
 	//禁止INT0中断
 	GPIO_DisableInt(SideKeyGPIOG,GPIOMask(SideKeyGPIOx)); //禁止中断功能
-	KeyState=0x0A; //复位检测模块
+	KeyState=0xAA; //复位检测模块
 	}
 
 //标记按键按下
@@ -138,16 +146,16 @@ void SideKey_LogicHandler(void)
 	//对按键进行去抖以及重新打开中断的判断
 	if(!GPIO_CheckIfIntEnabled(SideKeyGPIOG,GPIOMask(SideKeyGPIOx)))
 		{
+		//进行按键检查
 		KeyState<<=1;
-		if(KeyPress)KeyState|=0x01;
-		else KeyState&=0xFE;  //附加结果
+		if(KeyPress)KeyState++;//附加结果
 		//重新打开中断
-		buf=KeyState&0x0F;
-		if(buf==0x0F||KeyState==0x00)
+		buf=KeyState&KeyReleaseDetectMask;	
+		if(buf==KeyReleaseDetectMask||buf==0x00)
 			{
-			P0EXTIF=0;//清除GPIO Flag
-			IsKeyPressed=buf==0x0F?0:1; //更新按键状态	
-			GPIO_SetExtIntMode(SideKeyGPIOG,SideKeyGPIOx,buf==0x0F?GPIO_Int_Falling:GPIO_Int_Rising);//如果当前按键是松开状态则设置为下降沿，否则设置为上升沿
+			ClearKeyIntFlag();//清除按键响应的Flag
+			IsKeyPressed=buf==KeyReleaseDetectMask?0:1; //更新按键状态	
+			GPIO_SetExtIntMode(SideKeyGPIOG,SideKeyGPIOx,buf==KeyReleaseDetectMask?GPIO_Int_Falling:GPIO_Int_Rising);//如果当前按键是松开状态则设置为下降沿，否则设置为上升沿
 			GPIO_EnableInt(SideKeyGPIOG,GPIOMask(SideKeyGPIOx)); //使能中断功能
 			}
 		}	

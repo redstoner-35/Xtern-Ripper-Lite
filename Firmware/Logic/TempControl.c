@@ -2,73 +2,63 @@
 #include "LEDMgmt.h"
 #include "delay.h"
 #include "ModeControl.h"
+#include "TempControl.h"
 #include "OutputChannel.h"
 #include "cms8s6990.h"
 #include "PWMCfg.h"
-
-//PI环参数和最小电流限制
-#define ProtFullScale 18000 //PI环输出的细分值
-#define IntegrateFullScale 12000 //积分的Full Scale
-#define IntegralFactor 150 //积分系数(越大时间常数越高)
-#define MinumumILED 1500 //降档系统所能达到的最低电流(mA)
-
-//温度配置
-#define ForceOffTemp 75 //过热关机温度
-#define ForceDisableTurboTemp 60 //超过此温度无法进入极亮
-#define ConstantTemperature 50 //温控启动后维持的温度
+#include "Strap.h"
+#include "SelfTest.h"
 
 //温度控制用全局变量
-static int TempIntegral=0;
-static int TempProtBuf=0;
-bit IsTempLIMActive=0;  //温控是否已经启动
+static xdata int TempIntegral=0;
+static xdata int TempProtBuf=0;
+static bit IsTempLIMActive=0;  //温控是否已经启动
+static xdata unsigned char itgdelay=0xFF;
+bit IsThermalStepDown=0; //标记位，是否降档
 bit IsDisableTurbo=0;  //禁止再度进入到极亮档
 bit IsForceLeaveTurbo=0; //是否强制离开极亮档
 
-//上电时检测NTC状态
-void CheckNTCStatus(void)
+//换挡的时候根据当前恒温的电流重新PI值
+void RecalcPILoop(int LastCurrent)	
 	{
-	char i=127;
-	//检查温度数据
-	while(i)
-		{
-		SystemTelemHandler();
-		if(Data.IsNTCOK)return; //NTC已经正常工作，直接退出函数
-		delay_ms(5);
-		i--;
-		}		
-	//经过0.64秒的等待仍然不达标，报错
-	LEDMode=LED_Amber; 
-	LEDControlHandler(); //NTC自检不通过，黄灯常亮
-	while(1); //死循环
+	int buf,ModeCur;
+	//目标挡位不需要计算
+	if(!CurrentMode->IsNeedStepDown||CurrentMode->Current==0)return;
+	//获取当前挡位电流
+	ModeCur=CurrentMode->Current;
+	if(ModeCur>TurboCurrent)ModeCur=TurboCurrent; //取换挡之后的电流
+	//计算P值缓存
+	buf=TempProtBuf+(TempIntegral/IntegralFactor); //计算电流扣减值
+	if(buf<0)buf=0; //电流扣减值不能小于0
+  buf=LastCurrent-buf; //旧挡位电流减去扣减值得到实际电流(mA)
+	TempProtBuf=ModeCur-LastCurrent; //P值缓存等于新挡位的电流-旧挡位实际电流(mA)
+	if(TempProtBuf<0)TempProtBuf=0; //不允许比例缓存小于0
+	TempIntegral=0; //积分缓存=0
 	}
-
-//输出限流值的百分比
-int ThermalILIMCalc(int Input)
+	
+//输出当前温控的限流值
+int ThermalILIMCalc(void)
 	{
-	float buf,ILED,itgbuf;
-	//温控被禁止或者传入的电流小于等于0，传入多少电流就返回多少	
-	if(!IsTempLIMActive||Input<=0)return Input;
-	//附加比例项
-	buf=(float)TempProtBuf/(float)ProtFullScale; //换成比例项
-	buf*=100;
-	//附加积分项
-	itgbuf=(float)TempIntegral/(float)IntegrateFullScale; //换算积分项
-	buf+=itgbuf*10;//将换算完毕的积分项加入到比例项中（最多造成10%的功率波动）
-	if(buf<0)buf=0;
-	if(buf>100)buf=100; //限幅
-	//将输入电流和传入的电流值进行计算	
-	if(Input<MinumumILED)return MinumumILED; //输入最大电流参数小于允许的细分值
-	ILED=(float)Input-(float)MinumumILED; //计算输入电流之间的差值
-	ILED/=(float)100; //算出细分值
-	ILED*=(float)100-buf; //算出在最低电流值到达目标电流值之间的增量Δ
-	ILED+=(float)MinumumILED; //加上最小电流得到目标值
-	return (int)ILED; //返回实际的电流值
+	int result;
+	//判断温控是否需要进行计算
+	if(!IsTempLIMActive)result=Current; //温控被关闭，电流限制进来多少返回去多少
+	//开始温控计算
+	else
+		{
+	  result=TempProtBuf+(TempIntegral/IntegralFactor); //根据缓存计算结果
+		if(result<0)result=0; //不允许负值出现
+		result=Current-result;
+		if(result<MinumumILED)result=MinumumILED; //电流限制不允许小于最低电流
+		}
+	//判断是否触发降档并返回结果	
+	IsThermalStepDown=result==Current?0:1; //如果输入等于输出，则降档没发生
+	return result; 
 	}
 	
 //温控计算函数
 void ThermalCalcProcess(void)
 	{
-	int Err;
+	int Err,ProtFact,ProtRemain;
 	//温度传感器错误
 	if(!Data.IsNTCOK)
 		{
@@ -86,15 +76,15 @@ void ThermalCalcProcess(void)
 		ReportError(Fault_OverHeat);
 		return;
 		}
-	else if(Data.Systemp<(ForceOffTemp-20)&&ErrCode==Fault_OverHeat)
+	else if(Data.Systemp<(ConstantTemperature-10)&&ErrCode==Fault_OverHeat)
 		{
 	  ErrCode=Fault_None;
 	  SwitchToGear(Mode_OFF); //温度回落，消除故障指示
 		}
 	//PI环使能控制
 	if(!CurrentMode->IsNeedStepDown)IsTempLIMActive=0; //当前挡位不需要降档
-	else if(Data.Systemp>ConstantTemperature)IsTempLIMActive=1;
-	else if(Data.Systemp<(ConstantTemperature-10))IsTempLIMActive=0; //滞回控制
+	if(Data.Systemp>ConstantTemperature)IsTempLIMActive=1; //温度达到恒温阈值点，启动恒温
+	else if(Data.Systemp<ReleaseTemperature&&TempProtBuf==0&&TempIntegral==(-IntegrateFullScale))IsTempLIMActive=0;  //温度低于释放点且积分器和微分器输出达到负饱和，温控关闭
 	//PI环关闭，复位数值
 	if(!IsTempLIMActive)
 		{
@@ -102,17 +92,34 @@ void ThermalCalcProcess(void)
 		TempProtBuf=0;
 		}
 	//进行PI计算(仅在输出开启的时候进行)
-	else if(Current>0)
+	else if(IsDCDCEnabled)
 		{
 		//求误差
-		Err=Data.Systemp-ConstantTemperature;
+		Err=(int)(Data.Systemp-ConstantTemperature);
 		//比例项(P)
-		TempProtBuf+=(iabsf(Err)>1)?Err*(iabsf(Current/6000)+1):0; //动态比例项调整功能
-    if(TempProtBuf>ProtFullScale)TempProtBuf=ProtFullScale;
-    if(TempProtBuf<0)TempProtBuf=0;  //限制幅度
+		if(Err>2) //正误差
+			{
+			//计算P项数值
+			ProtFact=((CurrentBuf>>12)+1)*Err; //计算比例项(这里用了变值PI，P值会随着电流的增加而增加,P=I/4096+1)
+			//进行正误差累加
+			if(Current>TurboCurrent)ProtRemain=TurboCurrent;
+			else ProtRemain=Current; //按照当前挡位电流值取积分上限
+			ProtRemain=(ProtRemain-MinumumILED)-TempProtBuf; //计算往上加的可用剩余比例空间
+			if(ProtFact<ProtRemain)TempProtBuf+=ProtFact; //向上递增有空间，直接加
+			else TempProtBuf+=ProtRemain; //加上可用的剩余值
+			}
+		else if(Err<0)//负误差	
+			{
+			ProtFact=Err/3; //负误差，缩小为1/3减缓升档速度
+			ProtRemain=-TempProtBuf; //往下减的可用空间为负的当前值	
+			if(ProtFact>ProtRemain)TempProtBuf+=ProtFact; //向上递增有空间，直接加
+			else TempProtBuf+=ProtRemain; //加上可用的剩余值
+			}
     //积分项(I)
-    TempIntegral+=Err; //累加误差
-    if(TempIntegral>IntegrateFullScale)TempIntegral=IntegrateFullScale;
-		if(TempIntegral<-IntegrateFullScale)TempIntegral=-IntegrateFullScale;  //积分限幅
+		itgdelay--;
+		if(itgdelay)return;
+		itgdelay=0xFF;  //制造额外的延时进行分频
+		if(Err>0&&TempIntegral<IntegrateFullScale)TempIntegral++;
+    else if(Err<0&&TempIntegral>(-IntegrateFullScale))TempIntegral--; //累加误差
 		}
 	}	

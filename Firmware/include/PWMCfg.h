@@ -3,7 +3,7 @@
 
 //PWM参数设置
 #define SysFreq 48000000 //系统时钟频率(单位Hz)
-#define PWMFreq 8000 //PWM频率(单位Hz)	
+#define PWMFreq 6000 //PWM频率(单位Hz)	
 	
 //PWM计数器配置	
 #define PWMStepConstant (SysFreq/PWMFreq)-1 //PWM周期自动定义

@@ -4,6 +4,10 @@
 //按键检测延时(每个单位=0.125秒)
 #define LongPressTime 5 //长按按键检测延时(按下时间超过这个数值则判定为长按)
 #define ContShortPressWindow 4 //连续多次按下时侧按的检测释抑时间(在该时间以内按下的短按才算入短按次数内)
+#define KeyReleaseDetectMask 0xFF //按键按下的监测Mask
+
+//按键处理宏定义
+#define ClearKeyIntFlag() P2EXTIF=0 //清除GPIO Flag
 
 //按键事件结构体定义
 typedef struct

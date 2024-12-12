@@ -3,14 +3,33 @@
 #include "ADCCfg.h"
 #include "BattDisplay.h"
 #include "ModeControl.h"
+#include "SelfTest.h"
 #include "OutputChannel.h"
 #include "TailKey.h"
 #include "Strap.h"
 
 //内部变量
-static xdata int ErrDisplayIndex;
-static xdata char ShortDetectTIM;
-xdata char InputDetectTIM;
+static xdata int ErrDisplayIndex; //错误显示计时
+static xdata char ShortDetectTIM=0; //短路监测计时器
+static xdata char ShortBlankTIM; //短路blank定时器
+static code FaultCodeDef NonCriticalFault[]={ //非致命的错误代码
+	Fault_DCDCOpen,
+  Fault_DCDCShort, //开路和短路可能是误报，允许消除
+  Fault_InputOVP
+	};
+	
+//外部全局参考
+xdata FaultCodeDef ErrCode; //错误代码	
+
+//查询错误是否致命
+bit IsErrorFatal(void)	
+	{
+	char i;
+	for(i=0;i<sizeof(NonCriticalFault);i++)
+		if(NonCriticalFault[i]==ErrCode)return 0;
+	//寻找了目前已有的错误码发现是致命问题
+	return 1;
+	}
 
 //报告错误
 void ReportError(FaultCodeDef Code)
@@ -64,8 +83,9 @@ void OutputFaultDetect(void)
 	{
 	char buf,OErrID;
 	bit IsLED6V;
-	if(CurrentMode->ModeIdx==Mode_OFF||TailKeyTIM<(TailKeyRelTime+1))ShortDetectTIM=0; //关机状态复位检测
-	else if(Current>0) //开始检测
+	if(!IsDCDCEnabled)ShortBlankTIM=0; //DCDC关闭
+	else if(ShortBlankTIM<FaultBlankingInterval)ShortBlankTIM++; //时间未到不允许监测
+	else  //开始检测
 		{		
 		buf=ShortDetectTIM&0x0F; //取出定时器值					
 		IsLED6V=Data.OutputVoltage>4.5?1:0;//LED类型检测

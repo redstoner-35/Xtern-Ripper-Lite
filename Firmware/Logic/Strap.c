@@ -1,6 +1,6 @@
 #include "ADCCfg.h"
 #include "Strap.h"
-#include "ModeControl.h"
+#include "SelfTest.h"
 
 //全局变量
 xdata char VbattCellCount; //系统的电池节数

@@ -4,20 +4,17 @@
 #include "SideKey.h"
 #include "LEDMgmt.h"
 #include "ADCCfg.h"
-#include "PinDefs.h"
 #include "OutputChannel.h"
 #include "PWMCfg.h"
 #include "BattDisplay.h"
 #include "ModeControl.h"
+#include "TempControl.h"
 #include "TailKey.h"
 #include "Strap.h"
+#include "SelfTest.h"
 
 //函数声明
-void CheckNTCStatus(void);
 void SleepMgmt(void);
-void DisplayErrorTIMHandler(void);
-void ThermalCalcProcess(void);
-void OutputFaultDetect(void);
 
 //主函数
 void main()
@@ -26,12 +23,11 @@ void main()
  	delay_init();	 //延时函数初始化
 	SetSystemHBTimer(1);//启用系统心跳8Hz定时器	
 	//初始化外设
-	ADC_Init(); //初始化ADC
 	OutputChannel_Init(); //启动输出通道	
+	ADC_Init(); //初始化ADC
 	Strap_Init(); //读取驱动的配置电阻
 	TailKey_POR_Init(); //尾部初始化和正向开关检测
 	LED_Init(); //初始化侧按LED
-	CheckNTCStatus(); //检查NTC状态
 	ModeFSMInit(); //初始化挡位状态机
   SideKeyInit(); //侧按初始化
 	PWM_Init(); //启动PWM定时器	
@@ -39,6 +35,7 @@ void main()
 	OutputChannel_TestRun(); //输出通道试运行
 	DisplayVBattAtStart(); //显示输出电压
 	EnableADCAsync(); //启动ADC的异步模式提高处理速度
+	IRQ_ALL_ENABLE(); //打开所有中断
 	//主循环	
   while(1)
 		{
@@ -54,21 +51,15 @@ void main()
 		//8Hz定时处理
 		if(!SysHBFlag)continue; //时间没到，跳过处理
 		SysHBFlag=0;
+		SideKey_TIM_Callback();//侧按按键的监测定时器处理
 		TailKeyCounter(); //计时器
 		BattDisplayTIM(); //电池电量显示TIM
 		ModeFSMTIMHandler(); //模式状态机
 		HoldSwitchGearCmdHandler(); //长按换挡
 		DisplayErrorTIMHandler(); //故障代码显示
 		SleepMgmt(); //休眠管理
-		if(TailKeyTIM>TailKeyRelTime)LEDControlHandler();//侧按指示LED控制函数
+		if(TailKeyTIM<TailKeyRelTime)continue;
+		LEDControlHandler();//侧按指示LED控制函数
 		OutputFaultDetect();//输出故障检测		
 		}
-	}
-
-//GPIO2中断回调处理函数
-void Key_IRQHandler(void)  interrupt P2EI_VECTOR 
-  {
-	//侧按中断触发，响应中断
-	SideKey_Int_Callback();  //进行按键响应
-  P2EXTIF=0;
 	}

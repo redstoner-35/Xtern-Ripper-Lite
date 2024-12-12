@@ -6,6 +6,7 @@
 #include "cms8s6990.h"
 #include "BattDisplay.h"
 #include "Strap.h"
+#include "SelfTest.h"
 
 //平均计算结构体
 typedef struct
@@ -153,6 +154,31 @@ static void BatVshowFSM(void)
       break;
 		}
 	}
+//电池电量状态机
+static void BatteryStateFSM(void)
+	{
+	switch(BattState) 
+		 {
+		 //电池电量充足
+		 case Battery_Plenty: 
+				if(Battery<3.7)BattState=Battery_Mid; //电池电压小于3.7，回到电量较低状态
+			  break;
+		 //电池电量较为充足
+		 case Battery_Mid:
+			  if(Battery>3.9)BattState=Battery_Plenty; //电池电压大于3.8，回到充足状态
+				if(Battery<3.2)BattState=Battery_Low; //电池电压低于3.2则切换到电量低的状态
+				break;
+		 //电池电量不足
+		 case Battery_Low:
+		    if(Battery>3.5)BattState=Battery_Mid; //电池电压高于3.5，切换到电量中等的状态
+			  if(Battery<2.9)BattState=Battery_VeryLow; //电池电压低于2.8，报告严重不足
+		    break;
+		 //电池电量严重不足
+		 case Battery_VeryLow:
+			  if(Battery>3.2)BattState=Battery_Low; //电池电压回升到3.0，跳转到电量不足阶段
+		    break;
+		 }
+	}
 
 //复位电池电压检测缓存
 static void ResetBattAvg(void)	
@@ -166,12 +192,7 @@ static void ResetBattAvg(void)
 //在启动时显示电池电压
 void DisplayVBattAtStart(void)
 	{
-	int i;
-	//提前更新电池电量状态
-	if(Data.BatteryVoltage<2.9)BattState=Battery_VeryLow; //电池电压低于2.8，直接报告严重不足
-	else if(Data.BatteryVoltage<3.2)BattState=Battery_Low; //电池电压低于3.2则切换到电量低的状态
-	else if(Data.BatteryVoltage<3.6)BattState=Battery_Mid; //电池电量低于3.5则表示为中等
-	else BattState=Battery_Plenty; //电量充足
+	char i;
 	//清除电池故障和警告位	
 	IsBatteryAlert=0;
 	IsBatteryFault=0;
@@ -180,6 +201,7 @@ void DisplayVBattAtStart(void)
 	Battery=Data.BatteryVoltage; //更新电池电压
   //复位电池电压显示状态机		
 	VshowFSMState=BattVdis_Waiting;
+	for(i=0;i<10;i++)BatteryStateFSM(); //反复循环执行状态机更新到最终的电池状态
 	//启动电池电量显示(仅无错误且上次断电之前是关机状态的情况下)
 	if(CurrentMode->ModeIdx==Mode_OFF)
 		{
@@ -227,30 +249,10 @@ void BatteryTelemHandler(void)
 	else AlertThr=(float)(CurrentMode->LowVoltThres)/(float)1000; //从当前目标挡位读取模式值  
 	IsBatteryFault=Battery>2.7?0:1; //故障bit
 	if(IsBatteryFault)IsBatteryAlert=0; //故障bit置起后强制清除警报bit
-	else if(Data.VOUTRatio>75)IsBatteryAlert=1; //输出输入比值大于86%，DCDC芯片已经饱和，强制降档
+	else if(Data.VOUTRatio>75)IsBatteryAlert=1; //输出输入比值大于75%，DCDC芯片已经饱和，强制降档
 	else IsBatteryAlert=Battery>AlertThr?0:1; //警报bit
 	//电池电量指示状态机
-	switch(BattState) 
-		 {
-		 //电池电量充足
-		 case Battery_Plenty: 
-				if(Battery<3.7)BattState=Battery_Mid; //电池电压小于3.7，回到电量较低状态
-			  break;
-		 //电池电量较为充足
-		 case Battery_Mid:
-			  if(Battery>3.9)BattState=Battery_Plenty; //电池电压大于3.8，回到充足状态
-				if(Battery<3.2)BattState=Battery_Low; //电池电压低于3.2则切换到电量低的状态
-				break;
-		 //电池电量不足
-		 case Battery_Low:
-		    if(Battery>3.5)BattState=Battery_Mid; //电池电压高于3.5，切换到电量中等的状态
-			  if(Battery<2.9)BattState=Battery_VeryLow; //电池电压低于2.8，报告严重不足
-		    break;
-		 //电池电量严重不足
-		 case Battery_VeryLow:
-			  if(Battery>3.2)BattState=Battery_Low; //电池电压回升到3.0，跳转到电量不足阶段
-		    break;
-		 }
+	BatteryStateFSM();
 	//LED控制
 	if(LEDMode==LED_RedBlinkFifth||LEDMode==LED_GreenBlinkThird||LEDMode==LED_RedBlinkThird)return; //频闪指示下不执行控制 
 	if(ErrCode!=Fault_None)DisplayErrorIDHandler(); //有故障发生，显示错误

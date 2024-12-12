@@ -201,16 +201,23 @@ void ADC_DeInit(void)
 	ADCTemp.Ch=0;
 	ADCTemp.IsMissionProcessing=false;	
 	//将GPIO设置为普通模式
+	GPIO_SetMUXMode(OPFBIOG,OPFBIOx,GPIO_AF_GPIO);
+	GPIO_SetMUXMode(BATTSELIOG,BATTSELIOx,GPIO_AF_GPIO);
   GPIO_SetMUXMode(NTCInputIOG,NTCInputIOx,GPIO_AF_GPIO);
 	GPIO_SetMUXMode(VOUTFBIOG,VOUTFBIOx,GPIO_AF_GPIO);
+	GPIO_SetMUXMode(VBATInputIOG,VBATInputIOx,GPIO_AF_GPIO);
 	//设置为推挽输出
 	ADCDeInitCfg.Mode=GPIO_Out_PP;
   ADCDeInitCfg.Slew=GPIO_Slow_Slew;		
 	ADCDeInitCfg.DRVCurrent=GPIO_Low_Current; //配置为低电流推挽输出
-	GPIO_ConfigGPIOMode(NTCInputIOG,GPIOMask(NTCInputIOx),&ADCDeInitCfg); 
-  GPIO_ConfigGPIOMode(VOUTFBIOG,GPIOMask(VOUTFBIOx),&ADCDeInitCfg); 
-  GPIO_ConfigGPIOMode(BATTSELIOG,GPIOMask(BATTSELIOx),&ADCDeInitCfg); 
+	
+	GPIO_ConfigGPIOMode(OPFBIOG,GPIOMask(OPFBIOx),&ADCDeInitCfg);
+	GPIO_ConfigGPIOMode(BATTSELIOG,GPIOMask(BATTSELIOx),&ADCDeInitCfg); 
+  GPIO_ConfigGPIOMode(VOUTFBIOG,GPIOMask(VOUTFBIOG),&ADCDeInitCfg); 
+	GPIO_ConfigGPIOMode(VBATInputIOG,GPIOMask(VBATInputIOx),&ADCDeInitCfg); 
+	GPIO_ConfigGPIOMode(NTCInputIOG,GPIOMask(NTCInputIOx),&ADCDeInitCfg);
 	//全部输出0
+	GPIO_WriteBit(OPFBIOG,OPFBIOx,0);
   GPIO_WriteBit(BATTSELIOG,BATTSELIOx,0);
   GPIO_WriteBit(NTCInputIOG,NTCInputIOx,0);
 	GPIO_WriteBit(VOUTFBIOG,VOUTFBIOx,0);
@@ -226,11 +233,13 @@ void ADC_Init(void)
   ADCInitCfg.Slew=GPIO_Slow_Slew;		
 	ADCInitCfg.DRVCurrent=GPIO_Low_Current; //配置为浮空输入	
 	
+	GPIO_ConfigGPIOMode(OPFBIOG,GPIOMask(OPFBIOx),&ADCInitCfg);
 	GPIO_ConfigGPIOMode(BATTSELIOG,GPIOMask(BATTSELIOx),&ADCInitCfg); 
-  GPIO_ConfigGPIOMode(VOUTFBIOG,GPIOMask(VOUTFBIOG),&ADCInitCfg); //将对应的IO设置为指定模式
+  GPIO_ConfigGPIOMode(VOUTFBIOG,GPIOMask(VOUTFBIOG),&ADCInitCfg); 
 	GPIO_ConfigGPIOMode(VBATInputIOG,GPIOMask(VBATInputIOx),&ADCInitCfg); 
-	GPIO_ConfigGPIOMode(NTCInputIOG,GPIOMask(NTCInputIOx),&ADCInitCfg); 	
+	GPIO_ConfigGPIOMode(NTCInputIOG,GPIOMask(NTCInputIOx),&ADCInitCfg); 	//将对应的IO设置为指定的模式
 		
+	GPIO_SetMUXMode(OPFBIOG,OPFBIOx,GPIO_AF_Analog);
 	GPIO_SetMUXMode(BATTSELIOG,BATTSELIOx,GPIO_AF_Analog);
   GPIO_SetMUXMode(NTCInputIOG,NTCInputIOx,GPIO_AF_Analog);
 	GPIO_SetMUXMode(VOUTFBIOG,VOUTFBIOx,GPIO_AF_Analog);

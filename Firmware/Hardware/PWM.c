@@ -94,10 +94,10 @@ void PWM_OutputCtrlHandler(void)
 			 }
 	  return;
 		}
-	//PWM占空比限制
+	//PWM占空比参数限制
 	if(PWMDuty>100)PWMDuty=100;
 	if(PWMDuty<0)PWMDuty=0;
-	//配置装载数值
+	//配置寄存器装载PWM设置数值
 	IsNeedToEnableOutput=buf?1:0; //是否需要启用输出
 	buf=PWMDuty*(float)PWMStepConstant;
 	buf/=(float)100;

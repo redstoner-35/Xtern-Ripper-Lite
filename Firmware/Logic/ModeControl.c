@@ -6,8 +6,9 @@
 #include "RampConfig.h"
 #include "ADCCfg.h"
 #include "cms8s6990.h"
+#include "TempControl.h"
 #include "TailKey.h"
-#include "Strap.h"
+#include "SelfTest.h"
 
 //挡位结构体
 code ModeStrDef ModeSettings[ModeTotalDepth]=
@@ -19,7 +20,8 @@ code ModeStrDef ModeSettings[ModeTotalDepth]=
 		0,  //电流0mA
 		0,  //关机状态阈值为0强制解除警报
 		true,
-		false
+		false,
+		100
 		}, 
 		//出错了
 		{
@@ -28,7 +30,8 @@ code ModeStrDef ModeSettings[ModeTotalDepth]=
 		0,  //电流0mA
 		0,
 		false,
-		false
+		false,
+		100
 		}, 
 		//月光
 		{
@@ -37,52 +40,58 @@ code ModeStrDef ModeSettings[ModeTotalDepth]=
 		0,   //最小电流没用到，无视
 		2800,  //2.8V关断
 		false, //月光档有专用入口，无需带记忆
-		false
+		false,
+		50
 		}, 	
     //低亮
 		{
 		Mode_Low,
-		800,  //800mA电流
+		1000,  //1A电流
 		0,   //最小电流没用到，无视
 		2900,  //2.8V关断
 		true,
-		false
+		false,
+		69
 		},
     //中亮
 		{
 		Mode_Mid,
-		1500,  //1500mA电流
+		2000,  //2000mA电流
 		0,   //最小电流没用到，无视
 		3000,  //3V关断
 		true,
-		false
+		false,
+		86
 		}, 	
     //中高亮
 		{
 		Mode_MHigh,
-		3000,  //3000mA电流
+		4000,  //4000mA电流
 		0,   //最小电流没用到，无视
 		3050,  //3.05V关断
 		true,
-		true
+		true,
+		96
 		}, 	
     //高亮
 		{
 		Mode_High,
-		7500,  //7500mA电流
+		8000,  //8000mA电流
 		0,   //最小电流没用到，无视
 		3100,  //3.1V关断
 		true,
-		true
+		true,
+		102
 		}, 	
     //极亮
 		{
 		Mode_Turbo,
-		20000,  //20A电流(具体多少电流取决于strap)
+		22000,  //22A电流(具体多少电流取决于strap)
 		0,   //最小电流没用到，无视
 		3200,  //3.2V关断
 		false, //极亮不能带记忆
-		true
+		true,
+		105
 		}, 	
     //爆闪		
 		{
@@ -91,16 +100,18 @@ code ModeStrDef ModeSettings[ModeTotalDepth]=
 		0,   //最小电流没用到，无视
 		3000,  //3.0V关断
 		false, //爆闪不能带记忆
-		true
+		true,
+		105
 		}, 
 	  //无极调光		
 		{
 		Mode_Ramp,
-		7500,  //7500mA电流最大
-		800,   //最小800mA
+		8000,  //8000mA电流最大
+		1000,   //最小1000mA
 		3100,  //3.1V关断
 		false, //不能带记忆  
-		true
+		true,
+		69
 		}, 
 	  //SOS
 		{
@@ -109,7 +120,8 @@ code ModeStrDef ModeSettings[ModeTotalDepth]=
 		0,   //最小电流没用到，无视
 		3000,  //3.0V关断
 		false,	//SOS不能带记忆
-		true
+		true,
+		105
 		}, 
 	};
 
@@ -124,7 +136,6 @@ bit IsLocked; //锁定指示
 bit IsTacMode; //开启战术模式
 bit IsRampStart=0; //尾按调整无极调光
 static xdata SOSStateDef SOSState; //全局变量状态位
-xdata FaultCodeDef ErrCode; //错误代码	
 	
 //软件计时变量
 xdata char BattAlertTimer=0; //电池低电压告警调档
@@ -139,19 +150,12 @@ xdata char RampRiseCurrentTIM=0; //无极调光恢复电流的计时器
 void ModeFSMInit(void)
 {
 	char i;
-  extern xdata float StrobeDuty;
 	//初始化无极调光
 	RampCfg.RampMaxDisplayTIM=0;
-  for(i=0;i<ModeTotalDepth;i++)
+  for(i=0;i<ModeTotalDepth;i++)if(ModeSettings[i].ModeIdx==Mode_Ramp)//读取无极调光的数据
 	  {
-		//计算爆闪的占空比
-		if(ModeSettings[i].ModeIdx==Mode_Strobe)StrobeDuty=Duty_Calc(MainChannelShuntmOhm,ModeSettings[i].Current,HighShuntIOffset); 
-	  //读取无极调光的数据
-		if(ModeSettings[i].ModeIdx==Mode_Ramp)
-	    {
-			RampCfg.BattThres=ModeSettings[i].LowVoltThres; //低压检测上限恢复
-			RampCfg.CurrentLimit=ModeSettings[i].Current; //找到挡位数据中无极调光的挡位，电流上限恢复
-			}
+		RampCfg.BattThres=ModeSettings[i].LowVoltThres; //低压检测上限恢复
+		RampCfg.CurrentLimit=ModeSettings[i].Current; //找到挡位数据中无极调光的挡位，电流上限恢复
 		}
 	ReadRampConfig(); //从EEPROM内读取无极调光配置
 	//挡位模式配置
@@ -253,12 +257,14 @@ void ModeFSMTIMHandler(void)
 //挡位跳转
 int SwitchToGear(ModeIdxDef TargetMode)
 	{
-  int i;
-	ModeIdxDef BeforeMode=CurrentMode->ModeIdx; //存储当前模式			
+  int i,LastICC;
+	ModeIdxDef BeforeMode=CurrentMode->ModeIdx; //存储当前模式				
+	LastICC=CurrentMode->Current; //存储之前的挡位
 	for(i=0;i<ModeTotalDepth;i++)if(ModeSettings[i].ModeIdx==TargetMode)
 		{
 		SOSState=SOSState_Prepare; //每次换挡都把SOS状态机重置为初始值
 		CurrentMode=&ModeSettings[i]; //找到匹配index，赋值结构体
+		if(BeforeMode==Mode_Turbo&&TargetMode!=Mode_Turbo)RecalcPILoop(LastICC); //从极亮切换到其他挡位，重新设置PI环
 		if(BeforeMode==Mode_OFF&&TargetMode!=Mode_OFF)TailMemory_Save(TargetMode); //关机切换到开机，立即保存记忆
 		else TailSaveTIM=0; //清除计时器准备等一会再记忆
 		return 0;
@@ -339,7 +345,8 @@ static void BatteryLowAlertProcess(bool IsNeedToShutOff,ModeIdxDef ModeJump)
 void HoldSwitchGearCmdHandler(void)
 	{
 	char buf;
-	if(!getSideKeyHoldEvent()||CurrentMode->ModeIdx==Mode_OFF)HoldChangeGearTIM=0; //按键松开或者是关机状态，计时器复位
+	if(CurrentMode->ModeIdx==Mode_OFF)return; //关机状态禁止计时器运行
+	if(!getSideKeyHoldEvent())HoldChangeGearTIM=0; //按键松开或者是关机状态，计时器复位
 	else
 		{
 		buf=HoldChangeGearTIM&0x3F; //取出TIM值
@@ -350,7 +357,7 @@ void HoldSwitchGearCmdHandler(void)
 		HoldChangeGearTIM|=buf; //把数值写回去
 		}
 	//单击+长按倒换
-  if(!getSideKeyClickAndHoldEvent()||CurrentMode->ModeIdx==Mode_OFF)ClickHoldReverseGearTIM=0;	//按键松开或者是关机状态，计时器复位	
+  if(!getSideKeyClickAndHoldEvent())ClickHoldReverseGearTIM=0;	//按键松开或者是关机状态，计时器复位	
 	else
 		{
 		buf=ClickHoldReverseGearTIM&0x3F; //取出TIM值
@@ -458,21 +465,16 @@ static void EnterTurboStrobe(int TKCount,int ClickCount)
 	if(Count==2&&!IsDisableTurbo)SwitchToGear(Mode_Turbo); //双击极亮
 	if(Count==3)SwitchToGear(Mode_Strobe); //侧按3击进入爆闪
 	}
-	
-//PI环路的温控数据处理声明
-int ThermalILIMCalc(int Input);
-	
+
 //挡位状态机
 void ModeSwitchFSM(void)
 	{
 	bit IsHoldEvent;
 	int ClickCount;
 	char TKCount;
-	xdata float TargetCurrent; //当前目标电流	
 	//外部变量声明
 	extern volatile bit StrobeFlag;
 	extern bit IsForceLeaveTurbo;
-	extern bit IsPOSTKPressed;
 	//获取按键状态
 	TKCount=GetTailKeyCount();
 	IsHoldEvent=getSideKeyLongPressEvent();	
@@ -480,13 +482,12 @@ void ModeSwitchFSM(void)
 	//挡位记忆参数检查和EEPROM记忆
 	if(LastMode==Mode_OFF||LastMode>=ModeTotalDepth)LastMode=Mode_Low;
 	//状态机
-	if(ErrCode==Fault_DCDCFailedToStart||ErrCode==Fault_DCDCENOOC||ErrCode==Fault_StrapResistorError)return; //致命初始化错误
-	else switch(CurrentMode->ModeIdx)	
+	switch(CurrentMode->ModeIdx)	
 		{
 		//出现错误	
 		case Mode_Fault:
       IsTacMode=0; //故障后自动取消战术模式			
-			if(!IsHoldEvent||ErrCode==Fault_OverHeat)break; //用户没有按下按钮或者是过热状态不允许重置
+			if(!IsHoldEvent||IsErrorFatal())break; //用户没有按下按钮或者是致命的错误状态不允许重置
 		  ErrCode=Fault_None; //无故障
 			SwitchToGear(Mode_OFF);  //长按重置错误
 		  break;
@@ -633,21 +634,19 @@ void ModeSwitchFSM(void)
 		    break;	
 		}
   //应用输出电流
-	if(DisplayLockedTIM>0)TargetCurrent=80; //用户进入或者退出锁定，用80mA短暂点亮提示一下
-	else if(RampCfg.RampMaxDisplayTIM>0)TargetCurrent=-1; //无极调光模式在抵达上下限后短暂熄灭(-1电流表示不关闭防反接FET)
+	if(DisplayLockedTIM>0)Current=80; //用户进入或者退出锁定，用80mA短暂点亮提示一下
+	else if(RampCfg.RampMaxDisplayTIM>0)Current=-1; //无极调光模式在抵达上下限后短暂熄灭(-1电流表示不关闭防反接FET)
 	else switch(CurrentMode->ModeIdx)	
 		{
-		case Mode_Strobe:TargetCurrent=StrobeFlag?CurrentMode->Current:-1;break; //爆闪模式根据爆闪flag来回波动
+		case Mode_Strobe:Current=StrobeFlag?CurrentMode->Current:-1;break; //爆闪模式根据爆闪flag来回波动
 		case Mode_Ramp://无极调光模式取无极调光参数结构体内的电流
-			TargetCurrent=RampCfg.CurrentLimit<RampCfg.Current?RampCfg.CurrentLimit:RampCfg.Current;
+			Current=RampCfg.CurrentLimit<RampCfg.Current?RampCfg.CurrentLimit:RampCfg.Current;
 		  break;
-		case Mode_SOS:TargetCurrent=SOSFSM();break; //SOS模式，输出电流受SOS状态机调控
-		default:TargetCurrent=CurrentMode->Current; //目标电流
+		case Mode_SOS:Current=SOSFSM();break; //SOS模式，输出电流受SOS状态机调控
+		default:Current=CurrentMode->Current;break; //其他挡位使用设置值作为目标电流
 		}	
-	if(TargetCurrent>TurboCurrent)TargetCurrent=TurboCurrent; //如果电流超过了限制值，则等于目标设置
-	//根据温控的运算结果对输出电流进行限幅
-	getSideKeyShortPressCount(1); //清除按键处理
-	Current=ThermalILIMCalc(TargetCurrent);	
+	//清除按键处理
+	getSideKeyShortPressCount(1); 
 	//ROM挡位记忆控制
 	if((IsPOSTKPressed&&TKCount>0)||TailSaveTIM==24) //在挡位停留的时间足够或者开机时按下了挡位开关，保存数据
 		{

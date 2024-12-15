@@ -8,7 +8,7 @@
 #include "PWMCfg.h"
 
 //驱动尾按输入配置
-//#define EnableMechTailKey //启用驱动的尾按输入
+#define EnableMechTailKey //启用驱动的尾按输入
 
 //内部全局变量
 static xdata char TailKeyCount=0; //尾部按键按下的次数
@@ -97,7 +97,7 @@ void TailKey_POR_Init(void)
 		}
 	while(wait);
 	//检测完毕的后处理
-	if(IsPOSTKPressed)TailKeyTIM=TailKeyRelTime; //尾按有动作输入，将尾按响应定时器配置为在主循环运行到尾按处理后立即响应
+	TailKeyTIM=IsPOSTKPressed?TailKeyRelTime:TailKeyRelTime+1; //如果按键没有按下则让系统立即点亮，按键按下则直接进行处理后再点亮
 	C0CON0&=0x7F; //令C0EN=0，比较器停止运行	
 	#endif
 	}
@@ -130,7 +130,7 @@ void TailKeyCounter(void)
 	else if(TailSenTIM<3)TailSenTIM++;
 	else if(TailSenTIM==3)
 		{
-		EnableTailDetect();
+		if(Data.RawBattVolt>5.8)EnableTailDetect(); //尾按监测机制需要5.8V以上的电压才能有足够的置信度
 		TailSenTIM++;
 		}
 	//尾按开关按下之后用于监测连续多次按下的计时模块

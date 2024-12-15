@@ -99,7 +99,7 @@ code ModeStrDef ModeSettings[ModeTotalDepth]=
 		Mode_Strobe,
 		12000,  //12A电流
 		0,   //最小电流没用到，无视
-		3000,  //3.0V关断
+		2500,  //2.5V关断(实际上2.7就会拉闸，这里调成2.5是为了避免低电压处理反复触发导致爆闪工作异常)
 		false, //爆闪不能带记忆
 		true,
 		105
@@ -109,7 +109,7 @@ code ModeStrDef ModeSettings[ModeTotalDepth]=
 		Mode_Ramp,
 		8000,  //8000mA电流最大
 		1000,   //最小1000mA
-		3100,  //3.1V关断
+		3200,  //3.2V关断
 		false, //不能带记忆  
 		true,
 		69
@@ -119,13 +119,22 @@ code ModeStrDef ModeSettings[ModeTotalDepth]=
 		Mode_SOS,
 		12000,  //12A电流
 		0,   //最小电流没用到，无视
-		3000,  //3.0V关断
+		2500,  //2.5V关断(实际上2.7就会拉闸，实际上这里调成2.5是为了避免低电压处理反复触发重置SOS状态机导致SOS工作异常)
 		false,	//SOS不能带记忆
 		true,
 		105
 		}, 
 	};
 
+//爆闪和SOS的电流限制
+code unsigned char StrobeSOSILIM[]=
+{
+120, //电池电量充足的时候限流12A
+80, //电池电量中等的时候限流8A
+45, //电池电量低的时候限流4.5A
+1, //电池电量极低的时候限流0.1A
+}; 	
+	
 //全局变量(挡位)
 ModeStrDef *CurrentMode; //挡位结构体指针
 xdata ModeIdxDef LastMode; //开机为低亮
@@ -189,11 +198,14 @@ void ModeFSMTIMHandler(void)
 }
 
 //挡位跳转
-int SwitchToGear(ModeIdxDef TargetMode)
+void SwitchToGear(ModeIdxDef TargetMode)
 	{
-  int i,LastICC;
+	char i;
+  int LastICC;
+	//记录换档前的结果
 	ModeIdxDef BeforeMode=CurrentMode->ModeIdx; //存储当前模式				
 	LastICC=CurrentMode->Current; //存储之前的挡位
+	//开始寻找
 	for(i=0;i<ModeTotalDepth;i++)if(ModeSettings[i].ModeIdx==TargetMode)
 		{
     ResetSOSModule();		//复位整个SOS模块
@@ -201,10 +213,7 @@ int SwitchToGear(ModeIdxDef TargetMode)
 		if(BeforeMode==Mode_Turbo&&TargetMode!=Mode_Turbo)RecalcPILoop(LastICC); //从极亮切换到其他挡位，重新设置PI环
 		if(BeforeMode==Mode_OFF&&TargetMode!=Mode_OFF)TailMemory_Save(TargetMode); //关机切换到开机，立即保存记忆
 		else TailSaveTIM=0; //清除计时器准备等一会再记忆
-		return 0;
 		}
-	//啥也没找到，出错
-	return 1;
 	}
 	
 //无极调光的低电压保护
@@ -265,9 +274,13 @@ static void BatteryLowAlertProcess(bool IsNeedToShutOff,ModeIdxDef ModeJump)
 	time=BattAlertTimer&0x7F; //获取当前的计时值
 	if(!IsBatteryFault)Thr=BatteryAlertDelay;
 	else Thr=2;
-	//电池电量严重过低
-	if(IsNeedToShutOff&&IsBatteryFault&&time>=3)ReturnToOFFState(); //电池电压低于关机阈值大于0.5秒，立即关闭
-	//触发动作
+	//当前模式需要关机
+	if(IsNeedToShutOff)
+		 {
+		 //电池电压低于关机阈值大于0.5秒，立即关闭
+		 if(IsBatteryFault&&time>=3)ReturnToOFFState(); 
+		 }
+	//不需要关机，触发换挡动作
 	else if(time>Thr)
 		 {
 	   BattAlertTimer=0x80;//重置定时器
@@ -391,19 +404,44 @@ static void DetectIfNeedsOFF(int ClickCount)
 	ReturnToOFFState();//侧按单击或者在战术模式下松开按钮时关机
 	}	
 
+//开启到普通模式
+static void PowerToNormalMode(void)
+	{
+	if(Battery>2.9)SwitchToGear(IsRampEnabled?Mode_Ramp:LastMode); //正常开启
+	else if(Battery>2.7)SwitchToGear(Mode_Moon);	 //大于2.7V的时候只能开月光
+	else LEDMode=LED_RedBlinkFifth; //电池电量严重不足，红色闪五次
+	}
+	
 //进入极亮和爆闪的判断
 static void EnterTurboStrobe(int TKCount,int ClickCount)	
 	{
 	extern bit IsDisableTurbo;
 	int Count=TKCount>ClickCount?TKCount:ClickCount;
+	//双击极亮
+	if(Count==2)
+		{
+		if(Battery>3.1)SwitchToGear(Mode_Turbo); //电池电量充足正常开启
+		else PowerToNormalMode();  //电池电池电量不足时双击进入普通模式
+		}
+	//三击爆闪
+	if(Count==3)
+		{
+		if(Battery>2.7)SwitchToGear(Mode_Strobe);   //进入爆闪
+		else LEDMode=LED_RedBlinkFifth; //电量不足五次闪烁提示
+		}
+	}
+
+//特殊模式下回到特殊功能里面的切换
+static void LeaveSpecialMode(int TKCount,int ClickCount)	
+	{
+	int Count=TKCount>ClickCount?TKCount:ClickCount;
 	if(Count==2&&!IsDisableTurbo)SwitchToGear(Mode_Turbo); //双击极亮
-	if(Count==3)SwitchToGear(Mode_Strobe); //侧按3击进入爆闪
+	if(Count==3)SwitchToGear(IsRampEnabled?Mode_Ramp:Mode_Low); //三击退回到普通模式
 	}
 
 //挡位状态机
 void ModeSwitchFSM(void)
 	{
-	bit IsHoldEvent;
 	int ClickCount;
 	char TKCount;
 	//外部变量声明
@@ -411,7 +449,6 @@ void ModeSwitchFSM(void)
 	extern bit IsForceLeaveTurbo;
 	//获取按键状态
 	TKCount=GetTailKeyCount();
-	IsHoldEvent=getSideKeyLongPressEvent();	
 	ClickCount=getSideKeyShortPressCount(0);	//读取按键处理函数传过来的参数
 	//挡位记忆参数检查和EEPROM记忆
 	if(LastMode==Mode_OFF||LastMode>=ModeTotalDepth)LastMode=Mode_Low;
@@ -422,7 +459,7 @@ void ModeSwitchFSM(void)
 		//出现错误	
 		case Mode_Fault:
       IsTacMode=0; //故障后自动取消战术模式			
-			if(!IsHoldEvent||IsErrorFatal())break; //用户没有按下按钮或者是致命的错误状态不允许重置
+			if(!getSideKeyLongPressEvent()||IsErrorFatal())break; //用户没有按下按钮或者是致命的错误状态不允许重置
 		  ErrCode=Fault_None; //无故障
 			SwitchToGear(Mode_OFF);  //长按重置错误
 		  break;
@@ -446,38 +483,21 @@ void ModeSwitchFSM(void)
 			if(IsTacMode) //战术模式激活时进行判断
 					{
 					if(!getSideKeyHoldEvent())break;
-					if(Battery>3.1&&!IsDisableTurbo)SwitchToGear(Mode_Turbo); //电池电量充足且没有过热锁极亮，正常开启
-					else if(Battery>2.7)SwitchToGear(Mode_High);  //电池电池电量不足时进入高亮
-					else LEDMode=LED_RedBlinkFifth; //电池电量严重不足，红色闪五次
+          EnterTurboStrobe(2,2); //调用进入函数尝试进极亮
 					break;
 					}
 		  //非锁定正常单击开关机的事项
-			if(ClickCount==1||TKCount) //侧按单击开机进入循环
-					{
-				  if(Battery>2.9)SwitchToGear(IsRampEnabled?Mode_Ramp:LastMode); //正常开启
-					else if(Battery>2.7)SwitchToGear(Mode_Moon);	 //大于2.7V的时候只能开月光
-					else LEDMode=LED_RedBlinkFifth; //电池电量严重不足，红色闪五次
-					}			
-			else if(ClickCount==2)  //双击一键极亮		
-					{
-					if(IsDisableTurbo)LEDMode=LED_RedBlinkFifth; //手电温度过高锁死极亮，提示无法开启
-				  else if(Battery>3.1)SwitchToGear(Mode_Turbo); //电池电量充足正常开启
-					else if(Battery>2.7)SwitchToGear(IsRampEnabled?Mode_Ramp:LastMode);  //电池电池电量不足时双击进入普通模式
-					else LEDMode=LED_RedBlinkFifth; //电量不足五次闪烁提示
-					}
-      else if(IsHoldEvent)SwitchToGear(Mode_Moon); //长按开机直接进月光					
-			else if(ClickCount==3)//侧按三击进入爆闪 
-					{
-			    if(Battery>2.7)SwitchToGear(Mode_Strobe);   //进入爆闪
-					else LEDMode=LED_RedBlinkFifth; //电量不足五次闪烁提示
-					}
-			else if(ClickCount==4) //四击切换挡位模式和无极调光
+			if(ClickCount==1||TKCount)PowerToNormalMode(); //侧按单击开机进入循环	
+			//进入极亮和爆闪
+			else EnterTurboStrobe(ClickCount,TKCount);		
+      if(getSideKeyLongPressEvent())SwitchToGear(Mode_Moon); //长按开机直接进月光					
+			if(ClickCount==4) //四击切换挡位模式和无极调光
 					{	
 					IsRampEnabled=IsRampEnabled?0:1; //转换无极调光状态	
 					LEDMode=!IsRampEnabled?LED_RedBlinkThird:LED_GreenBlinkThird; //显示是否开启
 					SaveRampConfig(0); //保存配置到ROM内
 					}
-			else if(getSideKeyClickAndHoldEvent())TriggerVshowDisplay(); //单击长按查看电池当前电压和电量
+			if(getSideKeyClickAndHoldEvent())TriggerVshowDisplay(); //单击长按查看电池当前电压和电量
   		break;
 		//月光状态
 		 case Mode_Moon:
@@ -486,7 +506,7 @@ void ModeSwitchFSM(void)
 		   EnterTurboStrobe(TKCount,0); //尾按模式下，需要可以一键进入极亮或者爆闪所以加上检测
 			 if(ClickCount==1)ReturnToOFFState(); //回到关机状态				
 			 //电池电压充足，长按进入低亮挡位
-		   if((IsHoldEvent||TKCount==1)&&Battery>2.9)  
+		   if((getSideKeyLongPressEvent()||TKCount==1)&&Battery>2.9)  
 					{
 					SwitchToGear(IsRampEnabled?Mode_Ramp:Mode_Low); //长按回到正常挡位模式
 					if(TKCount==1)break; //尾按操作直接跳过转换
@@ -554,8 +574,7 @@ void ModeSwitchFSM(void)
     case Mode_Strobe:
 			  BatteryLowAlertProcess(true,Mode_Strobe);
 		    DetectIfNeedsOFF(ClickCount); //执行关机动作检测
-			  if(ClickCount==2&&!IsDisableTurbo)SwitchToGear(Mode_Turbo); //双击极亮
-				if(ClickCount==3)SwitchToGear(IsRampEnabled?Mode_Ramp:Mode_Low); //三击退回到普通模式
+		    LeaveSpecialMode(TKCount,ClickCount); //退出特殊模式回到其他地方的入口
 		    //长按换挡处理
 		    SideKeySwitchGearHandler(Mode_SOS,TKCount); //长按切换到SOS
 		    break;	
@@ -563,23 +582,28 @@ void ModeSwitchFSM(void)
 		case Mode_SOS:
 			  BatteryLowAlertProcess(true,Mode_SOS);
 		    DetectIfNeedsOFF(ClickCount); //执行关机动作检测
-			  if(ClickCount==2&&!IsDisableTurbo)SwitchToGear(Mode_Turbo); //双击极亮
-				if(ClickCount==3)SwitchToGear(IsRampEnabled?Mode_Ramp:Mode_Low); //三击退回到普通模式
+			  LeaveSpecialMode(TKCount,ClickCount); //退出特殊模式回到其他地方的入口
 		    //长按换挡处理
 		    SideKeySwitchGearHandler(Mode_Strobe,TKCount); //长按切换到爆闪
 		    break;	
 		}
   //应用输出电流
-	if(DisplayLockedTIM>0)Current=80; //用户进入或者退出锁定，用80mA短暂点亮提示一下
-	else if(RampCfg.RampMaxDisplayTIM>0||LowPowerStrobe())Current=-1; //无极调光模式在抵达上下限后短暂熄灭(-1电流表示不关闭防反接FET)
+	if(DisplayLockedTIM>0)Current=50; //用户进入或者退出锁定，用50mA短暂点亮提示一下
+	else if(RampCfg.RampMaxDisplayTIM>0)Current=-1; //无极调光模式在抵达上下限后短暂熄灭(-1电流表示不关闭防反接FET)
 	else switch(CurrentMode->ModeIdx)	
 		{
-		case Mode_Strobe:Current=StrobeFlag?CurrentMode->Current:-1;break; //爆闪模式根据爆闪flag来回波动
-		case Mode_Ramp://无极调光模式取无极调光参数结构体内的电流
-			Current=RampCfg.CurrentLimit<RampCfg.Current?RampCfg.CurrentLimit:RampCfg.Current;
-		  break;
-		case Mode_SOS:Current=SOSFSM();break; //SOS模式，输出电流受SOS状态机调控
-		default:Current=CurrentMode->Current;break; //其他挡位使用设置值作为目标电流
+		case Mode_SOS: 
+		case Mode_Strobe://爆闪模式和SOS模式
+			 ClickCount=(int)StrobeSOSILIM[(char)BattState]*(int)100; //取出电流限制
+	     if(CurrentMode->ModeIdx==Mode_SOS)Current=SOSFSM(); 
+			 else Current=!StrobeFlag?-1:CurrentMode->Current; //取出挡位电流
+		   if(Current>ClickCount)Current=ClickCount;  //电流限幅
+		   break; 
+		//其余模式，电流取正常值
+		default:
+		  if(LowPowerStrobe())Current=-1; //触发低压报警，闪烁
+			else if(CurrentMode->ModeIdx==Mode_Ramp)Current=RampCfg.CurrentLimit<RampCfg.Current?RampCfg.CurrentLimit:RampCfg.Current; //无极调光模式取结构体内数据
+		  else Current=CurrentMode->Current;//其他挡位使用设置值作为目标电流
 		}	
 	//清除按键处理
 	getSideKeyShortPressCount(1); 

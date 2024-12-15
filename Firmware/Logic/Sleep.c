@@ -29,7 +29,6 @@ void SystemPeripheralCTRL(bit IsEnable)
 	SetSystemHBTimer(0); //禁用心跳定时器
 	PWM_DeInit();
 	ADC_DeInit(); //关闭PWM和ADC
-	OutputChannel_DeInit(); //关闭输出功能
 	}
 
 //睡眠管理函数

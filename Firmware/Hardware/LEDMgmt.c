@@ -28,11 +28,6 @@ void LED_Init(void)
 	LEDInitCfg.Mode=GPIO_Out_PP;
   LEDInitCfg.Slew=GPIO_Slow_Slew;		
 	LEDInitCfg.DRVCurrent=GPIO_High_Current; //配置为低斜率大电流的推挽输出
-	//配置GPIO
-	GPIO_ConfigGPIOMode(RedLEDIOG,GPIOMask(RedLEDIOx),&LEDInitCfg); //红色LED(推挽输出)
-	GPIO_ConfigGPIOMode(GreenLEDIOG,GPIOMask(GreenLEDIOx),&LEDInitCfg); //绿色LED(推挽输出)
-	GPIO_SetMUXMode(RedLEDIOG,RedLEDIOx,GPIO_AF_PWMCH2);
-	GPIO_SetMUXMode(GreenLEDIOG,GreenLEDIOx,GPIO_AF_PWMCH3); //为了控制侧按LED的亮度改为PWM模式
 	//初始化模式设置
 	StepDownTIM=0;
 	LEDMode=LED_OFF;
@@ -49,6 +44,12 @@ void LED_Init(void)
 	PWMCNTE|=0x0C; //使能通道2 3的计数器，PWM开始运作
 	//配置占空比数据
 	SetLEDBrightNess();
+  while(PWMLOADEN&0x0C); //等待PWM完成应用
+	//配置GPIO（将配置GPIO拉到最后是因为避免PWM发生器工作异常引起闪烁）
+	GPIO_ConfigGPIOMode(RedLEDIOG,GPIOMask(RedLEDIOx),&LEDInitCfg); //红色LED(推挽输出)
+	GPIO_ConfigGPIOMode(GreenLEDIOG,GPIOMask(GreenLEDIOx),&LEDInitCfg); //绿色LED(推挽输出)
+	GPIO_SetMUXMode(RedLEDIOG,RedLEDIOx,GPIO_AF_PWMCH2);
+	GPIO_SetMUXMode(GreenLEDIOG,GreenLEDIOx,GPIO_AF_PWMCH3); //为了控制侧按LED的亮度改为PWM模式
 	}	
 	
 //设置LED亮度	

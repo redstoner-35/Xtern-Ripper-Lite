@@ -16,8 +16,8 @@ typedef enum
 	}LEDStateDef;
 
 //LED亮度配置
-#define LEDBrightnessFull 1599 //设置侧按LED的半亮度模式的亮度，范围1-2399对应1-100%	
-#define LEDBrightnessHalf 599 //设置侧按LED的半亮度模式的亮度，范围1-2399对应1-100%	
+#define LEDBrightnessFull 1400 //设置侧按LED的半亮度模式的亮度，范围1-2399对应1-100%	
+#define LEDBrightnessHalf 250 //设置侧按LED的半亮度模式的亮度，范围1-2399对应1-100%	
 	
 	
 //外部设置index	

@@ -13,7 +13,7 @@
 static xdata int TempIntegral=0;
 static xdata int TempProtBuf=0;
 static bit IsTempLIMActive=0;  //温控是否已经启动
-static xdata unsigned char itgdelay=0xFF;
+static unsigned char itgdelay=0xFF;
 bit IsThermalStepDown=0; //标记位，是否降档
 bit IsDisableTurbo=0;  //禁止再度进入到极亮档
 bit IsForceLeaveTurbo=0; //是否强制离开极亮档

@@ -103,20 +103,7 @@ void OutputChannel_TestRun(void)
 	//DCDC停止失败，EN不受控，报错
 	if(retry==0)ReportError(Fault_DCDCENOOC);
 	}	
-	
-//输出通道进入休眠的操作
-void OutputChannel_DeInit(void)
-	{
-	//复位电流缓冲器
-	Current=0;
-	CurrentBuf=0;
-	//关闭所有输出
-	RevPGate=0;
-	DCDCEN=0;
-	LShuntSEL=0;
-	HShuntSEL=0;	
-	}
-	
+
 //内部用于计算PWMDAC占空比的函数	
 static float Duty_Calc(float ShuntmOhm,int CurrentInput)
 	{

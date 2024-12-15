@@ -55,7 +55,7 @@ extern bit IsRampEnabled; //是否启用无极调光
 //函数
 void ModeFSMTIMHandler(void);//挡位状态机所需的软件定时器处理
 void ModeSwitchFSM();//挡位状态机	
-int SwitchToGear(ModeIdxDef TargetMode);//换到指定挡位
+void SwitchToGear(ModeIdxDef TargetMode);//换到指定挡位
 void ReturnToOFFState(void);//关机	
 void HoldSwitchGearCmdHandler(void); //换挡间隔生成	
 void ModeFSMInit(void); //初始化状态机	

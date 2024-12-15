@@ -200,28 +200,24 @@ void ADC_DeInit(void)
 	ADCTemp.Count=0;
 	ADCTemp.Ch=0;
 	ADCTemp.IsMissionProcessing=false;	
-	//将GPIO设置为普通模式
+	//将需要禁用的ADC输入GPIO设置为普通GPIO模式
 	GPIO_SetMUXMode(OPFBIOG,OPFBIOx,GPIO_AF_GPIO);
-	GPIO_SetMUXMode(BATTSELIOG,BATTSELIOx,GPIO_AF_GPIO);
-  GPIO_SetMUXMode(NTCInputIOG,NTCInputIOx,GPIO_AF_GPIO);
 	GPIO_SetMUXMode(VOUTFBIOG,VOUTFBIOx,GPIO_AF_GPIO);
 	GPIO_SetMUXMode(VBATInputIOG,VBATInputIOx,GPIO_AF_GPIO);
-	//设置为推挽输出
+	//将需要禁用的ADC输入设置为推挽输出
 	ADCDeInitCfg.Mode=GPIO_Out_PP;
   ADCDeInitCfg.Slew=GPIO_Slow_Slew;		
 	ADCDeInitCfg.DRVCurrent=GPIO_Low_Current; //配置为低电流推挽输出
 	
 	GPIO_ConfigGPIOMode(OPFBIOG,GPIOMask(OPFBIOx),&ADCDeInitCfg);
-	GPIO_ConfigGPIOMode(BATTSELIOG,GPIOMask(BATTSELIOx),&ADCDeInitCfg); 
   GPIO_ConfigGPIOMode(VOUTFBIOG,GPIOMask(VOUTFBIOG),&ADCDeInitCfg); 
 	GPIO_ConfigGPIOMode(VBATInputIOG,GPIOMask(VBATInputIOx),&ADCDeInitCfg); 
-	GPIO_ConfigGPIOMode(NTCInputIOG,GPIOMask(NTCInputIOx),&ADCDeInitCfg);
-	//全部输出0
+	//将需要禁用的ADC输入GPIO全部输出0
 	GPIO_WriteBit(OPFBIOG,OPFBIOx,0);
-  GPIO_WriteBit(BATTSELIOG,BATTSELIOx,0);
-  GPIO_WriteBit(NTCInputIOG,NTCInputIOx,0);
+  GPIO_WriteBit(VBATInputIOG,VBATInputIOx,0);
 	GPIO_WriteBit(VOUTFBIOG,VOUTFBIOx,0);
-	GPIO_WriteBit(NTCENIOG,NTCENIOx,0); //令供电输出=0关闭NTC电源
+	//令NTC偏压供电输出=0关闭NTC和Strap电源
+	GPIO_WriteBit(NTCENIOG,NTCENIOx,0); 
 	}
 
 //ADC初始化

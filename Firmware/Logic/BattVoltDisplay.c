@@ -36,7 +36,7 @@ bit LowPowerStrobe(void)
 	if(BattState!=Battery_VeryLow)LowVoltStrobeTIM=0;
 	//电量异常开始计时
 	else if(!LowVoltStrobeTIM)LowVoltStrobeTIM=1; //启动计时器
-	else if(LowVoltStrobeTIM<4)return 1; //触发闪烁标记电流为0
+	else if(LowVoltStrobeTIM>((LowVoltStrobeGap*8)-4))return 1; //触发闪烁标记电流为0
 	//其余情况返回0
 	return 0;
 	}
@@ -171,15 +171,9 @@ static void ResetBattAvg(void)
 void DisplayVBattAtStart(void)
 	{
 	char i;
-	//清除电池故障和警告位	
+	//复位电池异常标记位
 	IsBatteryAlert=0;
 	IsBatteryFault=0;
-	//初始化平均值缓存
-	ResetBattAvg();
-	Battery=Data.BatteryVoltage; //更新电池电压
-  //复位电池电压显示状态机		
-	VshowFSMState=BattVdis_Waiting;
-	for(i=0;i<10;i++)BatteryStateFSM(); //反复循环执行状态机更新到最终的电池状态
 	//启动电池电量显示(仅无错误且上次断电之前是关机状态的情况下)
 	if(CurrentMode->ModeIdx==Mode_OFF)
 		{
@@ -190,6 +184,16 @@ void DisplayVBattAtStart(void)
 			 }
 		delay_ms(400);
 	  BattShowTimer=12;
+		}
+	//初始化平均值缓存
+	ResetBattAvg();
+  //复位电池电压状态和电池显示状态机
+  VshowFSMState=BattVdis_Waiting;		
+	for(i=0;i<6;i++)
+		{
+		SystemTelemHandler();
+		Battery=Data.BatteryVoltage; //获取并更新电池电压
+		BatteryStateFSM(); //反复循环执行状态机更新到最终的电池状态
 		}
 	}
 //电池电量显示延时的处理

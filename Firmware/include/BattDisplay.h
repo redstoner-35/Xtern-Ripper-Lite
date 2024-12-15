@@ -17,10 +17,10 @@ typedef struct
 //状态变量enum
 typedef enum
 	{
-	Battery_Plenty, //电池电量充足
-	Battery_Mid, //电池电量较为充足
-	Battery_Low, //电池电量不足
-	Battery_VeryLow //电池电量严重不足
+	Battery_Plenty=0, //电池电量充足
+	Battery_Mid=1, //电池电量较为充足
+	Battery_Low=2, //电池电量不足
+	Battery_VeryLow=3 //电池电量严重不足
 	}BattStatusDef;
 
 typedef enum

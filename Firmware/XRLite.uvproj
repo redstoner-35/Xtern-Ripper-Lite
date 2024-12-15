@@ -496,6 +496,11 @@
               <FileType>1</FileType>
               <FilePath>.\Logic\Strap.c</FilePath>
             </File>
+            <File>
+              <FileName>SOS.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Logic\SOS.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

@@ -15,10 +15,15 @@ typedef enum
 	LED_RedBlinkThird //红色快闪三次
 	}LEDStateDef;
 
+//LED亮度配置
+#define LEDBrightnessFull 1599 //设置侧按LED的半亮度模式的亮度，范围1-2399对应1-100%	
+#define LEDBrightnessHalf 599 //设置侧按LED的半亮度模式的亮度，范围1-2399对应1-100%	
+	
+	
 //外部设置index	
 extern volatile LEDStateDef LEDMode;
-extern xdata int LEDBrightNess;
-
+extern bit IsHalfBrightness; //版亮度模式
+	
 //LED控制函数
 void LED_Init(void);
 void LEDControlHandler(void);	

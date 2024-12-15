@@ -29,17 +29,6 @@ typedef enum
 	Mode_SOS, //SOS挡位
 	}ModeIdxDef;
 
-typedef enum
-	{
-	SOSState_Prepare,
-	SOSState_3Dot,
-	SOSState_3DotWait,
-	SOSState_3Dash,
-	SOSState_3DashWait,
-	SOSState_3DotAgain,
-	SOSState_Wait,
-	}SOSStateDef;	
-	
 typedef struct
 	{
   ModeIdxDef ModeIdx;
@@ -62,10 +51,6 @@ extern bit IsRampEnabled; //是否启用无极调光
 #define HoldSwitchDelay 6 // 长按换挡延迟	
 #define SleepTimeOut 5 //休眠状态延时	
 #define ModeTotalDepth 11 //系统一共有几个挡位			
-#define SOSDotTime 2 //SOS信号(.)的时间	
-#define SOSDashTime 6 //SOS信号(-)的时间	
-#define SOSGapTime 7 //SOS信号在每次显示途中等待的时间
-#define SOSFinishGapTime 35 //每轮SOS发出结束后的等待时间
 	
 //函数
 void ModeFSMTIMHandler(void);//挡位状态机所需的软件定时器处理

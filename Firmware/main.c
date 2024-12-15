@@ -11,6 +11,7 @@
 #include "TempControl.h"
 #include "TailKey.h"
 #include "Strap.h"
+#include "SOS.h"
 #include "SelfTest.h"
 
 //函数声明
@@ -27,10 +28,10 @@ void main()
 	ADC_Init(); //初始化ADC
 	Strap_Init(); //读取驱动的配置电阻
 	TailKey_POR_Init(); //尾部初始化和正向开关检测
+	PWM_Init(); //启动PWM定时器
 	LED_Init(); //初始化侧按LED
 	ModeFSMInit(); //初始化挡位状态机
-  SideKeyInit(); //侧按初始化
-	PWM_Init(); //启动PWM定时器	
+  SideKeyInit(); //侧按初始化	
 	TailMemory_Recall(); //获取尾部上次关机前的挡位
 	OutputChannel_TestRun(); //输出通道试运行
 	DisplayVBattAtStart(); //显示输出电压
@@ -54,6 +55,7 @@ void main()
 		SideKey_TIM_Callback();//侧按按键的监测定时器处理
 		TailKeyCounter(); //计时器
 		BattDisplayTIM(); //电池电量显示TIM
+		SOSTIMHandler(); //SOS计时器
 		ModeFSMTIMHandler(); //模式状态机
 		HoldSwitchGearCmdHandler(); //长按换挡
 		DisplayErrorTIMHandler(); //故障代码显示

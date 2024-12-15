@@ -158,7 +158,7 @@ void OutputChannel_Calc(void)
 			{
 			case Mode_Strobe:CurrentBuf+=3000;break;
 			case Mode_SOS:CurrentBuf+=500;break;
-			default:CurrentBuf+=5;
+			default:CurrentBuf+=20;
 			}
 		if(CurrentBuf>=TargetCurrent)
 			{

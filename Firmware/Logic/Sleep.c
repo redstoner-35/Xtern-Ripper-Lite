@@ -12,9 +12,6 @@
 
 //外部引用
 extern volatile int SleepTimer;
-void CheckNTCStatus(void);
-void BatteryTelemHandler(void);
-bit IsWakupFromSleep=0; //从睡眠阶段唤醒
 
 //禁用/启用所有系统外设
 void SystemPeripheralCTRL(bit IsEnable)
@@ -23,6 +20,7 @@ void SystemPeripheralCTRL(bit IsEnable)
 		{
 		ADC_Init(); //初始化ADC
 		PWM_Init(); //初始化PWM发生器
+		LED_Init(); //初始化侧按LED
 		OutputChannel_Init(); //初始化输出通道
 		TailKey_Init(); //打开比较器
 		return;

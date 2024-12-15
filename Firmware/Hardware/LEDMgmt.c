@@ -5,11 +5,20 @@
 #include "cms8s6990.h"
 
 volatile LEDStateDef LEDMode; 
-static char timer=0;
-static xdata char StepDownTIM=0; 
+static char timer;
+bit IsHalfBrightness;
+static xdata char StepDownTIM; 
 
-sbit RLED=RedLEDIOP^RedLEDIOx;
-sbit GLED=GreenLEDIOP^GreenLEDIOx;
+static void SetLEDBrightNess(void)
+	{
+	//设置占空比寄存器
+	PWMD2H=IsHalfBrightness?(LEDBrightnessHalf>>8)&0xFF:(LEDBrightnessFull>>8)&0xFF;
+	PWMD2L=IsHalfBrightness?LEDBrightnessHalf&0xFF:LEDBrightnessFull&0xFF; 
+	PWMD3H=IsHalfBrightness?(LEDBrightnessHalf>>8)&0xFF:(LEDBrightnessFull>>8)&0xFF;
+	PWMD3L=IsHalfBrightness?LEDBrightnessHalf&0xFF:LEDBrightnessFull&0xFF;  
+  //应用占空比
+	PWMLOADEN|=0x0C; //加载通道0的PWM值
+	}
 
 //LED配置函数
 void LED_Init(void)
@@ -19,31 +28,56 @@ void LED_Init(void)
 	LEDInitCfg.Mode=GPIO_Out_PP;
   LEDInitCfg.Slew=GPIO_Slow_Slew;		
 	LEDInitCfg.DRVCurrent=GPIO_High_Current; //配置为低斜率大电流的推挽输出
-	//初始化寄存器
-	RLED=0;
-	GLED=0;
 	//配置GPIO
 	GPIO_ConfigGPIOMode(RedLEDIOG,GPIOMask(RedLEDIOx),&LEDInitCfg); //红色LED(推挽输出)
 	GPIO_ConfigGPIOMode(GreenLEDIOG,GPIOMask(GreenLEDIOx),&LEDInitCfg); //绿色LED(推挽输出)
+	GPIO_SetMUXMode(RedLEDIOG,RedLEDIOx,GPIO_AF_PWMCH2);
+	GPIO_SetMUXMode(GreenLEDIOG,GreenLEDIOx,GPIO_AF_PWMCH3); //为了控制侧按LED的亮度改为PWM模式
 	//初始化模式设置
+	StepDownTIM=0;
 	LEDMode=LED_OFF;
-	}
+	//配置PWM发生器
+	PWM23PSC=0x01;  //打开预分频器和计数器时钟 
+  PWM2DIV=0xff;   
+	PWM3DIV=0xff;   //令Fpwmcnt=Fsys=48MHz(不分频)	
+	//配置周期数据
+	PWMP2H=0x09;
+	PWMP2L=0x5F; 
+	PWMP3H=0x09;
+	PWMP3L=0x5F; //CNT=(48MHz/20Khz)-1=2399
+  //启用PWM
+	PWMCNTE|=0x0C; //使能通道2 3的计数器，PWM开始运作
+	//配置占空比数据
+	SetLEDBrightNess();
+	}	
+	
+//设置LED亮度	
+static void SetLEDONOFF(bit RLED,bit GLED)
+	{
+	unsigned char buf;
+  buf=PWMMASKE;
+	if(RLED)buf&=0xFB;
+	else buf|=0x04; //控制PWM通道2是否正常输出来打开关闭红色LED
+	if(GLED)buf&=0xF7;
+	else buf|=0x08; //控制PWM通道3是否正常输出来打开关闭绿色LED
+	PWMMASKE=buf;
+	}		
+	
 //LED控制函数
 void LEDControlHandler(void)
 	{
 	char buf;
-	bit IsLEDON;
+	bit IsLEDON,RLED,GLED;
 	extern bit IsThermalStepDown;
 	//短时间熄灭提示降档
 	if(IsThermalStepDown)
 		{
-		if(StepDownTIM<12)StepDownTIM++;
-		else
+		if(StepDownTIM<12)StepDownTIM++; //时间没到，继续累加时间
+			else //时间到，本周期侧按LED强制熄灭
 			{
 			StepDownTIM=0;
-			RLED=0;
-			GLED=0; 
-			return; //本周期强迫熄灭
+			SetLEDONOFF(0,0); 
+			return;
 			}
 		}
 	//据目标模式设置LED状态
@@ -85,11 +119,15 @@ void LEDControlHandler(void)
 				}		
 		  break;
 		}
+	//设置LED亮度
+  SetLEDBrightNess();
+	SetLEDONOFF(RLED,GLED);
 	}
 	
 //制造一次快闪
 void MakeFastStrobe(LEDStateDef LEDMode)
 	{
+	bit RLED,GLED;
 	//打开LED
 	switch(LEDMode)
 		{
@@ -97,8 +135,8 @@ void MakeFastStrobe(LEDStateDef LEDMode)
 		case LED_Red:RLED=1;GLED=0;break;//红色LED
 		case LED_Amber:RLED=1;GLED=1;break;//黄色LED
 		}
+	SetLEDONOFF(RLED,GLED);
 	delay_ms(20);
 	//关闭LED
-  RLED=0;
-	GLED=0;
+	SetLEDONOFF(0,0);
 	}	

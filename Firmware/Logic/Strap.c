@@ -27,7 +27,7 @@ LED类型配置为bit field，每1位对应一种阻值的条件下的LED
 15K：2串3.7V三元锂输入，3V LED，极亮10A（适用于N5-235HP标准使用不超功率）
 
 *****************************************************/
-code unsigned char ITurbo[]={145,180,100,220,220,120,180,100}; //极亮电流(0.1A)
+code unsigned char ITurbo[]={145,180,100,230,230,120,180,100}; //极亮电流(0.1A)
 code unsigned char LEDType=0x07;
 code unsigned char BattType=0x0F; //电池类型
 

@@ -9,6 +9,7 @@
 #include "TempControl.h"
 #include "TailKey.h"
 #include "SelfTest.h"
+#include "SOS.h"
 
 //挡位结构体
 code ModeStrDef ModeSettings[ModeTotalDepth]=
@@ -86,12 +87,12 @@ code ModeStrDef ModeSettings[ModeTotalDepth]=
     //极亮
 		{
 		Mode_Turbo,
-		22000,  //22A电流(具体多少电流取决于strap)
+		23000,  //23A电流(具体多少电流取决于strap)
 		0,   //最小电流没用到，无视
 		3200,  //3.2V关断
 		false, //极亮不能带记忆
 		true,
-		105
+		106
 		}, 	
     //爆闪		
 		{
@@ -135,14 +136,12 @@ bit IsRampEnabled; //是否开启无极调光
 bit IsLocked; //锁定指示
 bit IsTacMode; //开启战术模式
 bit IsRampStart=0; //尾按调整无极调光
-static xdata SOSStateDef SOSState; //全局变量状态位
 	
 //软件计时变量
 xdata char BattAlertTimer=0; //电池低电压告警调档
 xdata char HoldChangeGearTIM=0; //挡位模式下长按换挡
 xdata char DisplayLockedTIM=0; //锁定和战术模式进入退出显示	
 xdata char ClickHoldReverseGearTIM=0; //挡位模式下单击+长按倒向换挡
-xdata char SOSTIM=0;  //SOS计时
 xdata char TailSaveTIM=25; //尾部按键保存计时器
 xdata char RampRiseCurrentTIM=0; //无极调光恢复电流的计时器	
 	
@@ -159,7 +158,7 @@ void ModeFSMInit(void)
 		}
 	ReadRampConfig(); //从EEPROM内读取无极调光配置
 	//挡位模式配置
-	SOSState=SOSState_Prepare; //SOS状态机重置为初始值
+	ResetSOSModule(); //复位SOS模块
 	LastMode=Mode_Low;
 	ErrCode=Fault_None; //没有故障
 	CurrentMode=&ModeSettings[0]; //记忆重置为第一个档
@@ -167,75 +166,10 @@ void ModeFSMInit(void)
 	IsTacMode=0; //退出战术模式
 }	
 
-//SOS处理模块
-static int SOSFSM(void)
-{
-  int buf;
-	switch(SOSState)
-		{
-		//准备阶段
-		case SOSState_Prepare:
-			 SOSTIM=(3*SOSDotTime*2)-1;
-			 SOSState=SOSState_3Dot;
-		   break;
-		//第一次三点
-		case SOSState_3Dot:
-		   buf=SOSTIM%(SOSDotTime*2); //根据参数设置换算计时器的总时间
-       if(buf>(SOSDotTime-1))return CurrentMode->Current; //当前状态需要LED电流，返回目标电流值		
-		   if(SOSTIM==0) //显示结束
-				 {
-				 SOSTIM=SOSGapTime; 
-				 SOSState=SOSState_3DotWait;  //进入延时等待阶段
-				 }
-		   break;
-		//三点结束后的等待延时阶段
-	  case SOSState_3DotWait:
-			 if(SOSTIM>0)break;
-		   SOSTIM=(3*SOSDashTime*2)-1;
-		   SOSState=SOSState_3Dash;
-		   break;
-		//三划
-		case SOSState_3Dash:
-			 buf=SOSTIM%(SOSDashTime*2); //根据参数设置换算计时器的总时间
-       if(buf>(SOSDashTime-1))return CurrentMode->Current; //当前状态需要LED电流，返回目标电流值	
-		   if(SOSTIM==0) //显示结束
-				 {
-				 SOSTIM=SOSGapTime; 
-				 SOSState=SOSState_3DashWait;  //进入延时等待阶段
-				 }
-		   break;			
-		//三划结束后的等待延时阶段
-	  case SOSState_3DashWait:
-			 if(SOSTIM>0)break;
-			 SOSTIM=(3*SOSDotTime*2)-1;
-			 SOSState=SOSState_3DotAgain;
-		   break;		
-		//第二次三点
-		case SOSState_3DotAgain:
-			 buf=SOSTIM%(SOSDotTime*2); //根据参数设置换算计时器的总时间
-       if(buf>(SOSDotTime-1))return CurrentMode->Current; //当前状态需要LED电流，返回目标电流值		
-		   if(SOSTIM==0) //显示结束
-				 {
-				 SOSTIM=SOSFinishGapTime; 
-				 SOSState=SOSState_Wait;  //进入延时等待阶段
-				 }
-		   break;		
-	  //本轮信号发出完毕，等待
-	  case SOSState_Wait:	
-			 if(SOSTIM>0)break;
-		   SOSState=SOSState_Prepare; //回到准备状态
-		   break;
-		}
-	//其余情况返回0关闭防反接，确保尾按可以正确响应
-	return 0;
-}
-
 //挡位状态机所需的软件定时器处理
 void ModeFSMTIMHandler(void)
 {
 	char buf;
-	//SOS定时器
-	if(SOSTIM>0)SOSTIM--;
 	//无极调光相关的定时器
   if(TailSaveTIM<24)TailSaveTIM++;
 	if(RampRiseCurrentTIM>0&&RampRiseCurrentTIM<9)RampRiseCurrentTIM++;
@@ -243,7 +177,7 @@ void ModeFSMTIMHandler(void)
 	if(RampCfg.RampMaxDisplayTIM>0)RampCfg.RampMaxDisplayTIM--;
 	//锁定操作提示计时器
   if(DisplayLockedTIM>0)DisplayLockedTIM--;
-	//检测定时器状态
+	//电池警报计时器
 	if(BattAlertTimer&0x80)
 		{
 		buf=BattAlertTimer&0x7F; //取出TIM值
@@ -262,7 +196,7 @@ int SwitchToGear(ModeIdxDef TargetMode)
 	LastICC=CurrentMode->Current; //存储之前的挡位
 	for(i=0;i<ModeTotalDepth;i++)if(ModeSettings[i].ModeIdx==TargetMode)
 		{
-		SOSState=SOSState_Prepare; //每次换挡都把SOS状态机重置为初始值
+    ResetSOSModule();		//复位整个SOS模块
 		CurrentMode=&ModeSettings[i]; //找到匹配index，赋值结构体
 		if(BeforeMode==Mode_Turbo&&TargetMode!=Mode_Turbo)RecalcPILoop(LastICC); //从极亮切换到其他挡位，重新设置PI环
 		if(BeforeMode==Mode_OFF&&TargetMode!=Mode_OFF)TailMemory_Save(TargetMode); //关机切换到开机，立即保存记忆
@@ -277,7 +211,7 @@ int SwitchToGear(ModeIdxDef TargetMode)
 void RampLowVoltHandler(void)
 	{
 	char time;
-	extern xdata BattStatusDef BattState;
+	extern BattStatusDef BattState;
 	if(!IsBatteryAlert&&!IsBatteryFault)//没有告警
 		{
 		BattAlertTimer=0;
@@ -482,6 +416,7 @@ void ModeSwitchFSM(void)
 	//挡位记忆参数检查和EEPROM记忆
 	if(LastMode==Mode_OFF||LastMode>=ModeTotalDepth)LastMode=Mode_Low;
 	//状态机
+	IsHalfBrightness=0; //按键灯默认全亮
 	switch(CurrentMode->ModeIdx)	
 		{
 		//出现错误	
@@ -546,6 +481,7 @@ void ModeSwitchFSM(void)
   		break;
 		//月光状态
 		 case Mode_Moon:
+			 IsHalfBrightness=1; //月光模式按键灯亮度减半
 			 BatteryLowAlertProcess(true,Mode_Moon);
 		   EnterTurboStrobe(TKCount,0); //尾按模式下，需要可以一键进入极亮或者爆闪所以加上检测
 			 if(ClickCount==1)ReturnToOFFState(); //回到关机状态				
@@ -635,7 +571,7 @@ void ModeSwitchFSM(void)
 		}
   //应用输出电流
 	if(DisplayLockedTIM>0)Current=80; //用户进入或者退出锁定，用80mA短暂点亮提示一下
-	else if(RampCfg.RampMaxDisplayTIM>0)Current=-1; //无极调光模式在抵达上下限后短暂熄灭(-1电流表示不关闭防反接FET)
+	else if(RampCfg.RampMaxDisplayTIM>0||LowPowerStrobe())Current=-1; //无极调光模式在抵达上下限后短暂熄灭(-1电流表示不关闭防反接FET)
 	else switch(CurrentMode->ModeIdx)	
 		{
 		case Mode_Strobe:Current=StrobeFlag?CurrentMode->Current:-1;break; //爆闪模式根据爆闪flag来回波动

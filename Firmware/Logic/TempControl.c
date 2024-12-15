@@ -23,7 +23,7 @@ void RecalcPILoop(int LastCurrent)
 	{
 	int buf,ModeCur;
 	//目标挡位不需要计算
-	if(!CurrentMode->IsNeedStepDown||CurrentMode->Current==0)return;
+	if(!CurrentMode->IsNeedStepDown)return;
 	//获取当前挡位电流
 	ModeCur=CurrentMode->Current;
 	if(ModeCur>TurboCurrent)ModeCur=TurboCurrent; //取换挡之后的电流
@@ -97,7 +97,7 @@ void ThermalCalcProcess(void)
 		//求误差
 		Err=(int)(Data.Systemp-ConstantTemperature);
 		//比例项(P)
-		if(Err>2) //正误差
+		if(Err>1) //正误差
 			{
 			//计算P项数值
 			ProtFact=((CurrentBuf>>12)+1)*Err; //计算比例项(这里用了变值PI，P值会随着电流的增加而增加,P=I/4096+1)

@@ -1,6 +1,19 @@
 #ifndef _BattDs_
 #define _BattDs_
 
+//电池检测配置
+#define VBattAvgCount 40 //等效单节电池电压数据的平均次数(用于内部逻辑的低压保护,电量显示和电量不足跳档)
+#define LowVoltStrobeGap 15 //触发低电压提示之后每隔多久闪一次
+
+//电池电压平均计算结构体声明
+typedef struct
+	{
+	int Min;
+  int Max;
+	long AvgBuf;
+	unsigned char Count;
+	}AverageCalcDef;	
+
 //状态变量enum
 typedef enum
 	{
@@ -30,11 +43,12 @@ extern bit IsBatteryAlert; //电池低电警告发生
 extern bit IsBatteryFault; //电池低电量故障发生
 extern xdata float Battery; //滤波之后的电池电压
 extern xdata BattVshowFSMDef VshowFSMState; //状态机状态	
-
+	
 //函数
 void BattDisplayTIM(void); //电池电量显示函数处理
 void TriggerVshowDisplay(void); //启动电池电压显示
 void DisplayVBattAtStart(void);
 void BatteryTelemHandler(void);  //电池测量和指示灯控制
-
+bit LowPowerStrobe(void); //低电量提示闪
+	
 #endif

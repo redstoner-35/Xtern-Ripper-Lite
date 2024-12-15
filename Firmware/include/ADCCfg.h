@@ -44,9 +44,6 @@ typedef struct
 #define NTCUpperResValueK 330 //NTC热敏电阻的上拉阻值
 #define VStrapUpperResValueK 200 //配置电阻的上拉阻值
 
-//电池检测配置
-#define VBattAvgCount 300 //等效单节电池电压数据的平均次数(用于内部逻辑的低压保护,电量显示和电量不足跳档)
-
 //绝对值宏
 #define fabs(x) x>0?x:x*-1  //浮点求绝对值
 

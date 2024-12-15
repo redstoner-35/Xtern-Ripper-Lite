@@ -8,27 +8,17 @@
 #include "Strap.h"
 #include "SelfTest.h"
 
-//平均计算结构体
-typedef struct
-	{
-	int Min;
-  int Max;
-	long AvgBuf;
-	int Count;
-	}AverageCalcDef;	
-	
-//函数声明
-void DisplayErrorIDHandler(void);
-	
-	
-//内部全局变量
-static xdata char BattShowTimer=0; //电池电量显示命令
-xdata BattStatusDef BattState; //电池电量标记位
-static xdata AverageCalcDef BattVolt;	
-xdata float Battery; //等效单节电池电压
+//内部flag
 bit IsBatteryAlert; //电池电压低于警告值	
 bit IsBatteryFault; //电池电压低于保护值		
-static xdata int VshowTIM=0;
+
+//内部全局变量
+static char BattShowTimer; //电池电量显示计时
+BattStatusDef BattState; //电池电量标记位
+static xdata AverageCalcDef BattVolt;	
+xdata float Battery; //等效单节电池电压
+static xdata int VshowTIM;
+static char LowVoltStrobeTIM;
 static xdata float VbattSample; //取样的电池电压
 xdata BattVshowFSMDef VshowFSMState; //电池电压显示所需的计时器和状态机转移
 
@@ -38,11 +28,50 @@ void TriggerVshowDisplay(void)
 	if(VshowFSMState!=BattVdis_Waiting)return; //非等待显示状态禁止操作
 	VshowFSMState=BattVdis_PrepareDis;
 	}		
+
+//生成低电量提示报警
+bit LowPowerStrobe(void)
+	{
+	//电量正常
+	if(BattState!=Battery_VeryLow)LowVoltStrobeTIM=0;
+	//电量异常开始计时
+	else if(!LowVoltStrobeTIM)LowVoltStrobeTIM=1; //启动计时器
+	else if(LowVoltStrobeTIM<4)return 1; //触发闪烁标记电流为0
+	//其余情况返回0
+	return 0;
+	}
 	
-//电池详细电压显示处理
+//控制LED侧按产生闪烁指示电池电压的处理
+static void VshowGenerateSideStrobe(LEDStateDef Color,BattVshowFSMDef NextStep)
+	{
+	//通过快闪一次表示是0
+	if(VshowTIM==-1)
+		{
+		MakeFastStrobe(Color);
+		VshowTIM=0; 
+		}
+	//正常指示
+	LEDMode=(VshowTIM%4)>1?Color:LED_OFF; //制造红色闪烁指示对应位的电压
+	//显示结束
+	if(VshowTIM<=0) 
+		{
+		LEDMode=LED_OFF;
+		VshowTIM=10;
+		VshowFSMState=NextStep; //等待一会
+		}
+	}
+//电压显示状态机根据对应的电压位数计算出闪烁定时器的配置值
+static void VshowFSMGenTIMValue(int Vsample,BattVshowFSMDef NextStep)
+	{
+	if(VshowTIM>0)return; //时间未到不允许配置
+	if(Vsample==0)VshowTIM=-1; //0=瞬间闪一下
+	else VshowTIM=(4*Vsample)-1; //配置显示的时长
+  VshowFSMState=NextStep; //执行下一步显示
+	}
+	
+//电池详细电压显示的状态机处理
 static void BatVshowFSM(void)
 	{
-	int buf;
 	extern xdata char VbattCellCount;
 	//电量显示状态机
 	switch(VshowFSMState)
@@ -57,7 +86,7 @@ static void BatVshowFSM(void)
 			if(VshowTIM>12)LEDMode=LED_Green;
       else if(VshowTIM>10)LEDMode=LED_Amber;		
 		  else if(VshowTIM>8)LEDMode=LED_Red;	
-		  else LEDMode=LED_OFF; //红绿蓝闪烁之后等待
+		  else LEDMode=LED_OFF; //红黄绿闪烁之后等待
 		  //头部显示结束后开始正式显示电压
 		  if(VshowTIM>0)break; //时间未到
 			VbattSample=Data.RawBattVolt; //进行电压取样
@@ -68,78 +97,27 @@ static void BatVshowFSM(void)
 				VshowFSMState=BattVdis_ShowChargeLvl; //电压超出显示范围（用红色闪三次指示）
 				break;
 				}
-		  buf=(int)VbattSample;
-		  buf/=10; //显示十位
-		  if(buf==0)VshowTIM=-1; //0=瞬间闪一下
-			else VshowTIM=(4*buf)-1; //配置显示的时长
-		  VshowFSMState=BattVdis_Show10V; //跳转到10V显示
+			VshowFSMGenTIMValue((int)VbattSample/10,BattVdis_Show10V); //配置计时器开始显示
 		  break;
     //显示十位
 		case BattVdis_Show10V:
-			if(VshowTIM==-1)//通过快闪一次表示是0
-				{
-				MakeFastStrobe(LED_Red);
-				VshowTIM=0; 
-				}
-		  buf=VshowTIM%4;
-			LEDMode=buf>1?LED_Red:LED_OFF; //制造红色闪烁指示10V状态
-		  if(VshowTIM<=0) //显示结束
-				{
-				LEDMode=LED_OFF;
-				VshowTIM=10;
-				VshowFSMState=BattVdis_Gap10to1V; //等待一会
-				}
+			VshowGenerateSideStrobe(LED_Red,BattVdis_Gap10to1V); //调用处理函数生成红色侧部闪烁
 		  break;
 		//十位和个位之间的间隔
 		case BattVdis_Gap10to1V:
-			if(VshowTIM>0)break; //时间未到
-		  buf=(int)VbattSample; 
-			buf%=10; //显示个位
-			if(buf==0)VshowTIM=-1; //0=瞬间闪一下
-			else VshowTIM=(4*buf)-1; //配置显示的时长
-			VshowFSMState=BattVdis_Show1V; //跳转到1V显示	
+			VshowFSMGenTIMValue((int)VbattSample%10,BattVdis_Show1V); //配置计时器开始显示下一组	
 			break;	
 		//显示个位
 		case BattVdis_Show1V:
-		  if(VshowTIM==-1)//通过快闪一次表示是0
-				{
-				MakeFastStrobe(LED_Amber);
-				VshowTIM=0; 
-				}
-			buf=VshowTIM%4;
-			LEDMode=buf>1?LED_Amber:LED_OFF; //制造红色闪烁指示1V状态
-			if(VshowTIM<=0) //显示结束
-				{
-				LEDMode=LED_OFF;
-				VshowTIM=10;
-				VshowFSMState=BattVdis_Gap1to0_1V; //等待一会
-				}
+		  VshowGenerateSideStrobe(LED_Amber,BattVdis_Gap1to0_1V); //调用处理函数生成黄色侧部闪烁
 		  break;
 		//个位和十分位之间的间隔		
 		case BattVdis_Gap1to0_1V:	
-			  if(VshowTIM>0)break; //时间未到
-				VbattSample*=(float)10;
-				buf=(int)VbattSample; //乘10将小数点后一位缩放为个位 
-				buf%=10; //得到十分位状态
-				if(buf==0)VshowTIM=-1; //0=瞬间闪一下
-				else VshowTIM=(4*buf)-1; //配置显示的时长
-				VshowFSMState=BattVdis_Show0_1V; //跳转到0.1V显示
-				break;
+			VshowFSMGenTIMValue((int)(VbattSample*(float)10)%10,BattVdis_Show0_1V);
+			break;
 		//显示小数点后一位(0.1V)
 		case BattVdis_Show0_1V:
-		  if(VshowTIM==-1)//通过快闪一次表示是0
-				{
-				MakeFastStrobe(LED_Green);
-				VshowTIM=0; 
-				}
-			buf=VshowTIM%4;
-			LEDMode=buf>1?LED_Green:LED_OFF; //制造绿色闪烁指示0.1V状态
-		  if(VshowTIM<=0) //显示结束
-				{
-				LEDMode=LED_OFF;
-				VshowTIM=12; 
-				VshowFSMState=BattVdis_WaitShowChargeLvl; //等待1秒后开始显示电量
-				}
+		  VshowGenerateSideStrobe(LED_Green,BattVdis_WaitShowChargeLvl); //调用处理函数生成绿色侧部闪烁
 			break;
 		//等待一段时间后显示当前电量
 		case BattVdis_WaitShowChargeLvl:
@@ -217,19 +195,9 @@ void DisplayVBattAtStart(void)
 //电池电量显示延时的处理
 void BattDisplayTIM(void)
 	{
-	//电池电压显示的计时器处理	
-	if(VshowTIM>0)VshowTIM--;
-	//电池显示定时器
-	if(BattShowTimer>0)BattShowTimer--;
-	}
-	
-//电池参数测量和指示灯控制
-void BatteryTelemHandler(void)
-	{
-	float AlertThr;
 	long buf;
 	//电量平均模块计算
-  if(BattVolt.Count<VBattAvgCount)		
+	if(BattVolt.Count<VBattAvgCount)		
 		{
 		buf=(long)(Data.BatteryVoltage*1000);
 		BattVolt.Count++;
@@ -244,6 +212,19 @@ void BatteryTelemHandler(void)
 		Battery=(float)BattVolt.AvgBuf/(float)1000; //得到最终的电池电压
 		ResetBattAvg(); //复位缓存
 		}
+	//低电压提示闪烁计时器
+	if(LowVoltStrobeTIM==LowVoltStrobeGap*8)LowVoltStrobeTIM=1;//时间到清除数值重新计时
+	else if(LowVoltStrobeTIM>0)LowVoltStrobeTIM++;
+	//电池电压显示的计时器处理	
+	if(VshowTIM>0)VshowTIM--;
+	//电池显示定时器
+	if(BattShowTimer>0)BattShowTimer--;
+	}
+	
+//电池参数测量和指示灯控制
+void BatteryTelemHandler(void)
+	{
+	float AlertThr;
 	//根据电池电压控制flag实现低电压降档和关机保护
 	if(CurrentMode->ModeIdx==Mode_Ramp)AlertThr=(float)RampCfg.BattThres/(float)1000; //无极调光模式下，使用结构体内的动态阈值
 	else AlertThr=(float)(CurrentMode->LowVoltThres)/(float)1000; //从当前目标挡位读取模式值  

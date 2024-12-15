@@ -9,7 +9,7 @@
 //温度配置
 #define ForceOffTemp 75 //过热关机温度
 #define ForceDisableTurboTemp 60 //超过此温度无法进入极亮
-#define ConstantTemperature 52 //温控启动后维持的温度
+#define ConstantTemperature 51 //温控启动后维持的温度
 #define ReleaseTemperature 42 //温控释放的温度
 
 //函数

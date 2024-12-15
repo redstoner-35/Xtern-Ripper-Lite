@@ -8,7 +8,7 @@
 #include "PWMCfg.h"
 
 //驱动尾按输入配置
-#define EnableMechTailKey //启用驱动的尾按输入
+//#define EnableMechTailKey //启用驱动的尾按输入
 
 //内部全局变量
 static xdata char TailKeyCount=0; //尾部按键按下的次数
@@ -70,7 +70,7 @@ void TailKey_POR_Init(void)
 	TailKeyTIM=0; 
 	//使能尾按检测开始检测正向开关的动作
 	if(!IsPosTailKey)return; //配置电阻设置为反向开关，退出检测
-	wait=28;
+	wait=30;
 	C0CON0|=0x80; //令C0EN=1，比较器开始运行
 	do
 		{		
@@ -87,7 +87,7 @@ void TailKey_POR_Init(void)
 			}
     else if(!(IsEnterLowPowerMode&0x1F)) //按键松开足够时间说明是点动操作			
 		  {
-			wait=28; //尾按按下，复位定时器
+			wait=30; //尾按按下，复位定时器
 			if(!TKState)continue; //尾按当前没有通电足够长的时间，不允许判断
 			IsPOSTKPressed=1;
 			IsEnterLowPowerMode=0; //清除按键缓存等待按键确实按下再动作

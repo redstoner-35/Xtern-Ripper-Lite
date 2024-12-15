@@ -26,7 +26,7 @@ void PWM_DeInit(void)
 static void UploadPWMValue(void)	
 	{
 	PWMLOADEN=0x01; //加载通道0的PWM值
-	while(PWMLOADEN!=0); //等待加载结束
+	while(PWMLOADEN&0x01); //等待加载结束
 	}
 
 //PWM定时器初始化
@@ -44,15 +44,15 @@ void PWM_Init(void)
   GPIO_SetMUXMode(PWMDACIOG,PWMDACIOx,GPIO_AF_PWMCH0);
 	//配置PWM发生器
 	PWMCON=0x00; //PWM通道为六通道独立模式，向下计数，关闭非对称计数功能	
-	PWMOE=0x01; //打开PWM输出通道0
+	PWMOE=0x0D; //打开PWM输出通道0 2 3
 	PWM01PSC=0x01;  //打开预分频器和计数器时钟 
   PWM0DIV=0xff;   //令Fpwmcnt=Fsys=48MHz(不分频)
   PWMPINV=0x00; //所有通道均设置为正常输出模式
-	PWMCNTM=0x01; //通道0配置为自动加载模式
-	PWMCNTCLR=0x01; //初始化PWM的时候复位定时器
+	PWMCNTM=0x0D; //通道0 2 3配置为自动加载模式
+	PWMCNTCLR=0x0D; //初始化PWM的时候复位通道0 2 3的定时器
 	PWMDTE=0x00; //关闭死区时间
 	PWMMASKD=0x00; 
-	PWMMASKE=0x01; //PWM掩码功能启用，默认状态下禁止通道0输出
+	PWMMASKE=0x0D; //PWM掩码功能启用，默认状态下禁止通道0 2 3输出
 	//配置周期数据
 	PWMP0H=(PWMStepConstant>>8)&0xFF;
 	PWMP0L=PWMStepConstant&0xFF;	
@@ -74,7 +74,8 @@ void PWM_ForceSetDuty(bit IsEnable)
 	PWMD0H=0x01;
 	PWMD0L=IsEnable?0xFF:0;			
 	UploadPWMValue(); //立即上传PWM值
-	PWMMASKE=IsNeedToEnableOutput?0x00:0x01;  //设置寄存器打开输出
+	if(IsNeedToEnableOutput)PWMMASKE&=0xFE;
+	else PWMMASKE|=0x01;//设置寄存器打开输出  
 	}	
 	
 //根据PWM结构体内的配置进行输出
@@ -84,15 +85,15 @@ void PWM_OutputCtrlHandler(void)
 	float buf;
 	//判断是否需要加载的逻辑运算
 	if(!IsNeedToUploadPWM)return; //不需要加载
-	else if(IsPWMLoading) //当次加载运行中
+	else if(IsPWMLoading) //当次加载已开始，进行结束监测
 		{
-	  if(!PWMLOADEN)//加载寄存器复位为0，表示加载成功
-			 {
-			 PWMMASKE=IsNeedToEnableOutput?0x00:0x01; //更新PWMMASKE寄存器根据输出状态启用对应的通道
-			 IsNeedToUploadPWM=0;
-		   IsPWMLoading=0;  //正在加载状态为清除
-			 }
-	  return;
+	  if(PWMLOADEN&0x01)return;//加载寄存器复位为0，表示加载成功
+	  //加载结束
+		if(IsNeedToEnableOutput)PWMMASKE&=0xFE;
+		else PWMMASKE|=0x01;   //更新PWMMASKE寄存器根据输出状态启用对应的通道
+		IsNeedToUploadPWM=0;
+		IsPWMLoading=0;  //正在加载状态为清除
+		return;
 		}
 	//PWM占空比参数限制
 	if(PWMDuty>100)PWMDuty=100;
@@ -106,5 +107,5 @@ void PWM_OutputCtrlHandler(void)
 	PWMD0L=value&0xFF;			
 	//PWM寄存器数值已装入，应用数值		
 	IsPWMLoading=1; //标记加载过程进行中
-	PWMLOADEN=0x01; //开始加载
+	PWMLOADEN|=0x01; //开始加载
 	}

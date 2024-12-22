@@ -13,10 +13,13 @@
 static xdata int TempIntegral=0;
 static xdata int TempProtBuf=0;
 static bit IsTempLIMActive=0;  //温控是否已经启动
-static unsigned char itgdelay=0xFF;
+static char Err=0; //全局变量，PI环的误差值
+
+//状态位
 bit IsThermalStepDown=0; //标记位，是否降档
 bit IsDisableTurbo=0;  //禁止再度进入到极亮档
 bit IsForceLeaveTurbo=0; //是否强制离开极亮档
+bit IsSystemShutDown=0; //是否触发温控强制关机
 
 //换挡的时候根据当前恒温的电流重新PI值
 void RecalcPILoop(int LastCurrent)	
@@ -25,8 +28,7 @@ void RecalcPILoop(int LastCurrent)
 	//目标挡位不需要计算
 	if(!CurrentMode->IsNeedStepDown)return;
 	//获取当前挡位电流
-	ModeCur=CurrentMode->Current;
-	if(ModeCur>TurboCurrent)ModeCur=TurboCurrent; //取换挡之后的电流
+	ModeCur=QueryCurrentGearILED();
 	//计算P值缓存
 	buf=TempProtBuf+(TempIntegral/IntegralFactor); //计算电流扣减值
 	if(buf<0)buf=0; //电流扣减值不能小于0
@@ -54,53 +56,73 @@ int ThermalILIMCalc(void)
 	IsThermalStepDown=result==Current?0:1; //如果输入等于输出，则降档没发生
 	return result; 
 	}
-	
+//获取温控环路的恒温值
+static char QueryConstantTemp(void)	
+	{
+	//极亮的时候使用更高的温控拉长降档时间
+	return CurrentMode->ModeIdx==Mode_Turbo?TurboConstantTemperature:ConstantTemperature;
+	}
+
+//温控PI环中I项(积分器)的计算
+void ThermalItgCalc(void)	
+	{
+	if(!IsDCDCEnabled)return; //DCDC关闭，不进行采集
+	//积分项(I)
+	if(Err>0&&TempIntegral<IntegrateFullScale)TempIntegral++;
+  if(Err<0&&TempIntegral>(-IntegrateFullScale))TempIntegral--; //累加误差
+	}
+
+//负责温度使能控制的施密特触发器
+static bit TempSchmittTrigger(bit ValueIN,char HighThreshold,char LowThreshold)	
+	{
+	if(Data.Systemp>HighThreshold)return 1;
+	if(Data.Systemp<LowThreshold)return 0;
+	//数值保持，没有改变
+	return ValueIN;
+	}
+
 //温控计算函数
 void ThermalCalcProcess(void)
 	{
-	int Err,ProtFact,ProtRemain;
+	int ProtFact,ProtRemain;
+	bit ThermalStatus;
 	//温度传感器错误
 	if(!Data.IsNTCOK)
 		{
 		ReportError(Fault_NTCFailed);
 		return;
 		}
-	//当筒头温度过高时，关闭极亮档	
-	if(Data.Systemp>(ForceOffTemp-10))IsForceLeaveTurbo=1;  //温度距离关机保护的间距不到10度，立即退出极亮
-	if(Data.Systemp>ForceDisableTurboTemp)IsDisableTurbo=1;
-	else if(Data.Systemp<(ForceDisableTurboTemp-10))IsDisableTurbo=0;
-	if(IsForceLeaveTurbo&&!IsDisableTurbo)IsForceLeaveTurbo=0;	 //如果强制退出极亮标志位置位且温度已经回落到极亮解锁的阈值点，则复位
-	//过热故障
-	if(Data.Systemp>ForceOffTemp)
-		{
-		ReportError(Fault_OverHeat);
-		return;
-		}
-	else if(Data.Systemp<(ConstantTemperature-10)&&ErrCode==Fault_OverHeat)
-		{
-	  ErrCode=Fault_None;
-	  SwitchToGear(Mode_OFF); //温度回落，消除故障指示
-		}
+	//手电温度过高时对极亮进行限制
+	IsForceLeaveTurbo=TempSchmittTrigger(IsForceLeaveTurbo,ForceOffTemp-10,ForceDisableTurboTemp-10);	//温度距离关机保护的间距不到10度，立即退出极亮
+	IsDisableTurbo=TempSchmittTrigger(IsDisableTurbo,ForceDisableTurboTemp,ForceDisableTurboTemp-10); //温度达到关闭极亮档的阈值，关闭极亮
+	//过热关机保护
+	IsSystemShutDown=TempSchmittTrigger(IsSystemShutDown,ForceOffTemp,ConstantTemperature-10);
+  if(IsSystemShutDown)ReportError(Fault_OverHeat); //报故障
+	else if(ErrCode==Fault_OverHeat)ClearError(); //消除掉当前错误
 	//PI环使能控制
 	if(!CurrentMode->IsNeedStepDown)IsTempLIMActive=0; //当前挡位不需要降档
-	if(Data.Systemp>ConstantTemperature)IsTempLIMActive=1; //温度达到恒温阈值点，启动恒温
-	else if(Data.Systemp<ReleaseTemperature&&TempProtBuf==0&&TempIntegral==(-IntegrateFullScale))IsTempLIMActive=0;  //温度低于释放点且积分器和微分器输出达到负饱和，温控关闭
+	else //使用施密特函数决定温控是否激活
+		{
+		ThermalStatus=TempSchmittTrigger(IsTempLIMActive,QueryConstantTemp(),ReleaseTemperature); //获取施密特触发器的结果
+		if(ThermalStatus)IsTempLIMActive=1;//施密特函数要求激活温控，立即激活
+		else if(!ThermalStatus&&TempProtBuf==0&&TempIntegral<=0)IsTempLIMActive=0; //施密特函数要求关闭温控，等待比例缓存为0解除限流后关闭
+		}
 	//PI环关闭，复位数值
 	if(!IsTempLIMActive)
 		{
 		TempIntegral=0;
 		TempProtBuf=0;
 		}
-	//进行PI计算(仅在输出开启的时候进行)
+	//进行PI环的P计算(仅在输出开启的时候进行)
 	else if(IsDCDCEnabled)
 		{
 		//求误差
-		Err=(int)(Data.Systemp-ConstantTemperature);
+		Err=Data.Systemp-QueryConstantTemp();
 		//比例项(P)
-		if(Err>1) //正误差
+		if(Err>2) //正误差
 			{
 			//计算P项数值
-			ProtFact=((CurrentBuf>>12)+1)*Err; //计算比例项(这里用了变值PI，P值会随着电流的增加而增加,P=I/4096+1)
+			ProtFact=((CurrentBuf>>12)+1)*(int)Err; //计算比例项(这里用了变值PI，P值会随着电流的增加而增加,P=I/4096+1)
 			//进行正误差累加
 			if(Current>TurboCurrent)ProtRemain=TurboCurrent;
 			else ProtRemain=Current; //按照当前挡位电流值取积分上限
@@ -110,16 +132,10 @@ void ThermalCalcProcess(void)
 			}
 		else if(Err<0)//负误差	
 			{
-			ProtFact=Err/3; //负误差，缩小为1/3减缓升档速度
+			ProtFact=(int)Err/5; //负误差，缩小为1/3减缓升档速度
 			ProtRemain=-TempProtBuf; //往下减的可用空间为负的当前值	
 			if(ProtFact>ProtRemain)TempProtBuf+=ProtFact; //向上递增有空间，直接加
 			else TempProtBuf+=ProtRemain; //加上可用的剩余值
 			}
-    //积分项(I)
-		itgdelay--;
-		if(itgdelay)return;
-		itgdelay=0xFF;  //制造额外的延时进行分频
-		if(Err>0&&TempIntegral<IntegrateFullScale)TempIntegral++;
-    else if(Err<0&&TempIntegral>(-IntegrateFullScale))TempIntegral--; //累加误差
 		}
 	}	

@@ -42,18 +42,16 @@ void SideKeyInit(void)
 	KeyState=0xFF;
 	KeyTimer[0]=0x00;
 	KeyTimer[1]=0x00;
-  Keyevent.LongPressEvent=0;
 	Keyevent.ShortPressCount=0;
 	Keyevent.ShortPressEvent=0;
-	Keyevent.PressAndHoldEvent=0;
+	Keyevent.HoldStat=HoldEvent_None;
 	}
 	
 //检测是否有事件发生
 bit IsKeyEventOccurred(void)
 	{
-	if(Keyevent.LongPressEvent)return 1;
+	if(Keyevent.HoldStat!=HoldEvent_None)return 1;
 	if(Keyevent.ShortPressEvent)return 1;
-	if(Keyevent.PressAndHoldEvent)return 1;
 	//什么也没有，退出不处理
 	return 0;	
 	}	
@@ -92,9 +90,9 @@ void SideKey_Int_Callback(void)
 		IsKeyPressed = 0;
 		time=KeyTimer[0]&0x7F;//从计时器取出按键按下时间
 		KeyTimer[0]=0;//复位并关闭定时器0
-		if(Keyevent.LongPressDetected||Keyevent.PressAndHoldEvent)//如果已经检测到长按事件则下面什么都不做
+		if(Keyevent.LongPressDetected||Keyevent.HoldStat!=HoldEvent_None)//如果已经检测到长按事件则下面什么都不做
 		  {
-			Keyevent.PressAndHoldEvent=0;
+			Keyevent.HoldStat=HoldEvent_None;
 			Keyevent.LongPressDetected=0;//清除检测到的表示
 	    }
 		else if(time<(unsigned char)LongPressTime)//短按事件发生      
@@ -135,9 +133,12 @@ static void ClickAndHoldEventHandler(int PressCount)
 	Keyevent.ShortPressEvent=0;
 	Keyevent.ShortPressCount=0; //短按次数为0
 	Keyevent.LongPressDetected=0;
-	Keyevent.LongPressEvent=0;//短按和长按事件没发生
-	//单击+长按
-	Keyevent.PressAndHoldEvent=(PressCount==1)?1:0;
+	//多击+长按
+	switch(PressCount)
+		{
+		case 1: Keyevent.HoldStat=HoldEvent_1H;break;
+		case 2: Keyevent.HoldStat=HoldEvent_2H;break;
+		}
 	}
 //侧按键逻辑处理函数
 void SideKey_LogicHandler(void)
@@ -169,8 +170,7 @@ void SideKey_LogicHandler(void)
 		else //长按事件
 		  {
 			Keyevent.ShortPressCount=0;
-      Keyevent.PressAndHoldEvent=0;
-			Keyevent.LongPressEvent=1;//长按事件发生
+			Keyevent.HoldStat=HoldEvent_H;//长按事件发生
 	    Keyevent.LongPressDetected=1;//长按检测到了  
 			}
 		KeyTimer[0]=0;//关闭定时器
@@ -189,7 +189,7 @@ void SideKey_LogicHandler(void)
 int getSideKeyShortPressCount(bit IsRemoveResult)
   {
   short buf;
-	if(Keyevent.LongPressDetected||Keyevent.PressAndHoldEvent)return 0;
+	if(Keyevent.HoldStat!=HoldEvent_None)return 0;
 	if(!Keyevent.ShortPressEvent)return 0;
 	buf=Keyevent.ShortPressCount;
   if(IsRemoveResult)
@@ -202,8 +202,8 @@ int getSideKeyShortPressCount(bit IsRemoveResult)
 //获取侧按按键长按2秒事件的函数
 bit getSideKeyLongPressEvent(void)
   {
-	if(!Keyevent.LongPressEvent)return 0;
-	else Keyevent.LongPressEvent=0;
+	if(Keyevent.HoldStat!=HoldEvent_H)return 0;
+	else Keyevent.HoldStat=HoldEvent_None;
   return 1;
 	}
 //获取侧按按键一直按下的函数
@@ -211,8 +211,14 @@ bit getSideKeyHoldEvent(void)
   {
 	return Keyevent.LongPressDetected?1:0;
 	}
-//获取侧按按键短按一下立刻长按的函数
-bit getSideKeyClickAndHoldEvent(void)
-  {
-		return Keyevent.PressAndHoldEvent?1:0;
+//获取侧按按键单击事件
+bit getSideKey1HEvent(void)
+	{
+	return Keyevent.HoldStat==HoldEvent_1H?1:0;
+	}
+//获取按键单击+长按次数的操作
+char getSideKeyNClickAndHoldEvent(void)
+	{
+	//Enum值是特殊设计的，按键次数=enum值-1
+	return (char)(Keyevent.HoldStat)-1>0?(char)(Keyevent.HoldStat)-1:0;
 	}

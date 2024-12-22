@@ -26,6 +26,7 @@ extern xdata FaultCodeDef ErrCode; //错误代码
 	
 //函数
 void ReportError(FaultCodeDef Code); //报告错误
+void ClearError(void); //消除错误
 void DisplayErrorTIMHandler(void); //显示错误时候用到的计时器处理
 void DisplayErrorIDHandler(void); //根据错误ID进行显示的处理
 void OutputFaultDetect(void); //输出故障监测函数	

@@ -9,14 +9,21 @@
 //按键处理宏定义
 #define ClearKeyIntFlag() P2EXTIF=0 //清除GPIO Flag
 
+typedef enum
+{
+HoldEvent_None=0,
+HoldEvent_H=1, //长按
+HoldEvent_1H=2, //单击+长按
+HoldEvent_2H //双击+长按
+}HoldEventDef;
+
 //按键事件结构体定义
 typedef struct
 {
 char LongPressDetected;
-char LongPressEvent;
 char ShortPressCount;
 char ShortPressEvent;
-char PressAndHoldEvent;
+HoldEventDef HoldStat;
 }KeyEventStrDef;
 
 //函数
@@ -24,9 +31,10 @@ void SideKeyInit(void);
 int getSideKeyShortPressCount(bit IsRemoveResult);//获取侧按按键的单击和连击次数
 bit getSideKeyLongPressEvent(void);//获得侧按按钮长按的事件
 bit getSideKeyHoldEvent(void);//获得侧按按钮一直按住的事件
-bit getSideKeyClickAndHoldEvent(void);//获得侧按按钮短按一下立即长按的事件
 bit IsKeyEventOccurred(void); //检测是否有事件发生
+char getSideKeyNClickAndHoldEvent(void); //获取侧按按下N次+长按的按键数
 void MarkAsKeyPressed(void); //标记按键按下
+bit getSideKey1HEvent(void); //获取侧按按键单击
 
 //回调处理
 void SideKey_Int_Callback(void);//侧按中断的处理

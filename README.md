@@ -89,7 +89,7 @@ FlashLightOS-Entry是面向低成本，较低性能的增强型8位8051单片机
 + 切换无极调光和挡位模式：关机状态下四击开关，此时开关指示灯将会闪烁三次。如果闪烁颜色为红色则无极调光已被关闭，绿色则为开启。
 + 战术模式：关机状态下六击开关，手电主灯迅速频闪一次表示进入战术模式。此时按下开关手电以极亮运行，松开则熄灭，再度6击则退出。
 + 按键锁：关机状态下五击开关，手电主灯点亮0.5秒表示进入锁定模式，此时除五击解锁外的任何操作均被忽略。
-+ 查询电量：进入操作和逻辑中的一致。当进入电量查询模式后手电首先以红黄绿依次点亮的方式提示用户即将显示电量。如果电池电压在合法范围内，则在延迟1秒后手电将通过红色，黄色和绿色的指定次数闪烁提示用户当前的电池电压。如果电池电压超出显示范围（例如2串模式的驱动意外接入3串的锂电池组）则驱动会通过三次红色闪烁提示电压非法。对于电池电压的显示方式则会根据驱动的配置电阻所指定的电池串数自动选择。如果驱动配置为三串输入的时候，系统的显示方式将会被设置为99.9V模式，2串模式则驱动会自动配置为9.99V模式显示以提高电压显示精度。对于电压显示的计算方式请参考如下内容：
++ 查询电量：进入操作和逻辑中的一致（如果手电处于开机状态，则通过双击+长按进入）。当进入电量查询模式后手电首先以红黄绿依次点亮的方式提示用户即将显示电量。如果电池电压在合法范围内，则在延迟1秒后手电将通过红色，黄色和绿色的指定次数闪烁提示用户当前的电池电压。如果电池电压超出显示范围（例如2串模式的驱动意外接入3串的锂电池组）则驱动会通过三次红色闪烁提示电压非法。对于电池电压的显示方式则会根据驱动的配置电阻所指定的电池串数自动选择。如果驱动配置为三串输入的时候，系统的显示方式将会被设置为99.9V模式，2串模式则驱动会自动配置为9.99V模式显示以提高电压显示精度。对于电压显示的计算方式请参考如下内容：
     + 99.9V显示模式：红色闪烁次数x10+黄色闪烁次数+绿色闪烁次数x0.1=当前电池电压(V)，例如`红色慢闪1次-黄色快闪一次-绿色慢闪4次`表示电池电压为10x1+0+4x0.1=10.4V。
     + 9.99V显示模式：红色闪烁次数+黄色闪烁次数*0.1+绿色闪烁次数x0.01=当前电池电压(V)，例如`红色慢闪8次-黄色快闪一次-绿色慢闪4次`表示电池电压为8+0x0.1+4x0.01=8.04V。
 
@@ -163,7 +163,7 @@ FlashLightOS-Entry是面向低成本，较低性能的增强型8位8051单片机
 + HSI_FS                     :  Fhsi/1              
 + EXT_RESET                  :  DISABLE             
 + EXT_RESETSEL               :  P00                 
-+ WAKEUP_WAITTIME            :  500us               
++ WAKEUP_WAITTIME            :  100us               
 + CPU_WAITCLOCK              :  1T                  
 + WRITE_PROTECT[0-2K]        :  DISABLE             
 + WRITE_PROTECT[2-4K]        :  DISABLE             
@@ -174,6 +174,20 @@ FlashLightOS-Entry是面向低成本，较低性能的增强型8位8051单片机
 + WRITE_PROTECT[12-14K]      :  DISABLE             
 + WRITE_PROTECT[14-16K]      :  DISABLE             
 + BOOT                       :  BOOT_DIS            
+
+#### 代码内非语法错误的提示
+
+为了确保用户不会错误的填写部分关键数值（例如温控系统的配置参数）导致固件行为异常，本固件源码内包含一些条件编译的监测代码用于监测非法数值。如果编译时遇到了非语法错误的输出，可以在这里查询相应的错误并进行修正。
+
++ `Error 001:Invalid Integral Configuration,Trim Value or time-factor out of range!`: 积分器的时间常数和电流修调值决定了积分器的上限，由于积分器所使用的变量为int 16，其值域为-32767到32767。如果积分器上限超过了值域则会导致数值溢出引起程序异常。此时您需要减小电流修调值和时间常数确保两者之积不大于32000。
++ `Error 002:Invalid Integral Configuration,Trim Value or time-factor must not be zero or less than zero!`: 积分器的时间常数和电流修调值决定了积分器的上限，为了确保积分器能正常运行，积分器的上限值不能为0或者负数，请检查填入的数值是否包含负数和0。
++ `Error 003:Emergency Shutdown Temp must not exceeded 85 Celsius!` : 紧急关机温度太高了，不能超过85度
++ `Error 004:Force Disble Turbo Temp must less than Emergency Shutdown Temp for at least 15 Celsius!` :
++ `Error 005:Force Disble Turbo Temp must higher than Constant Temp of Turbo Mode for at least 8 Celsius!`: 强制禁用极亮挡位的温控值应该比紧急关机温度低15度以上，且至少高于极亮恒温温度8度
++ `Error 006:Constant Temperature of Turbo Mode must lagger than Constant Temperature of other mode!`:
++ `Error 007:Constant Temperature of other mode must lagger than Thermal Control Release Temp for 5 Celsius!`: 非极亮挡位的温控恒温温度必须要比极亮挡位的温控数值小，且至少比温控停止的阈值高5度确保温控的稳定运行。
++ `Error 008:Thermal Control Release Temp is too low and will not release at summer!`: PI环的温控释放点太低，在夏天因为手电自发热可能导致温控始终激活，即使通过外力给手电降温也无法正确退出。
+
 
 ----------------------------------------------------------------------------------------------------------------------------------
 © redstoner_35 @ 35's Embedded Systems Inc.  2024

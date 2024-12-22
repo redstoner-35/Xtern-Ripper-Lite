@@ -10,7 +10,7 @@
 #define iabsf(x) x>0?x:-x //整数绝对值
 
 //PWM使能操作
-#define PWM_Enable() 	PWMFBKC=0x00;PWMCNTE=0x01 //使能通道0的计数器，PWM开始运行
+#define PWM_Enable() 	PWMFBKC=0x00;PWMCNTE=0x0D //使能通道0的计数器，PWM开始运行
 	 
 	
 //PWM输出配置结构体

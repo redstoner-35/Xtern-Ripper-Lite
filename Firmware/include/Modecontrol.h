@@ -53,6 +53,7 @@ extern bit IsRampEnabled; //是否启用无极调光
 #define ModeTotalDepth 11 //系统一共有几个挡位			
 	
 //函数
+int QueryCurrentGearILED(void); //获取当前挡位的电流值
 void ModeFSMTIMHandler(void);//挡位状态机所需的软件定时器处理
 void ModeSwitchFSM();//挡位状态机	
 void SwitchToGear(ModeIdxDef TargetMode);//换到指定挡位

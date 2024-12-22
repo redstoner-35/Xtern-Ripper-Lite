@@ -48,7 +48,7 @@ int SOSFSM(void)
 		//第一和第二次三点
 		case SOSState_3DotAgain:
 		case SOSState_3Dot:
-       if(SOSTIMDetect(SOSDotTime))return CurrentMode->Current; //当前状态需要LED电流，返回目标电流值		
+       if(SOSTIMDetect(SOSDotTime))return QueryCurrentGearILED(); //当前状态需要LED电流，返回目标电流值		
 			 if(SOSState==SOSState_3Dot)SOSFSM_Jump(SOSState_3DotWait,SOSGapTime);  //进入延时等待阶段
 		   else SOSFSM_Jump(SOSState_Wait,SOSFinishGapTime);//进入延时等待阶段
 		   break;
@@ -58,7 +58,7 @@ int SOSFSM(void)
 		   break;
 		//三划
 		case SOSState_3Dash:
-			 if(SOSTIMDetect(SOSDashTime))return CurrentMode->Current; //当前状态需要LED电流，返回目标电流值	
+			 if(SOSTIMDetect(SOSDashTime))return QueryCurrentGearILED(); //当前状态需要LED电流，返回目标电流值	
 		   SOSFSM_Jump(SOSState_3DashWait,SOSGapTime);
 		   break;			
 		//三划结束后的等待延时阶段

@@ -62,7 +62,7 @@ code unsigned int NTCTableBottom[91]={
 //传入参数：NTC阻值(Ω),温度是否有效的bool指针输出
 //返回参数：温度值(℃)
 char CalcNTCTemp(bool *IsNTCOK,unsigned long NTCRes){
-int i;
+char i;
 volatile unsigned long NTCTableValue;
 //电阻值大于查找表阻值上限，温度异常
 if(NTCRes>(unsigned long)5319893)

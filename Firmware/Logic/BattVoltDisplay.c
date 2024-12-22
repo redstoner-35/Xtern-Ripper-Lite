@@ -27,6 +27,11 @@ void TriggerVshowDisplay(void)
 	{
 	if(VshowFSMState!=BattVdis_Waiting)return; //非等待显示状态禁止操作
 	VshowFSMState=BattVdis_PrepareDis;
+	if(CurrentMode->ModeIdx!=Mode_OFF)
+		{
+		LEDMode=LED_OFF;
+		VshowTIM=8; //点亮状态查询电量，熄灭LED等一会
+		}
 	}		
 
 //生成低电量提示报警
@@ -69,6 +74,18 @@ static void VshowFSMGenTIMValue(int Vsample,BattVshowFSMDef NextStep)
   VshowFSMState=NextStep; //执行下一步显示
 	}
 	
+//根据电池状态机设置LED指示电池电量
+static void SetPowerLEDBasedOnVbatt(void)	
+	{
+	switch(BattState)
+		{
+		 case Battery_Plenty:LEDMode=LED_Green;break; //电池电量充足绿色常亮
+		 case Battery_Mid:LEDMode=LED_Amber;break; //电池电量中等黄色常亮
+		 case Battery_Low:LEDMode=LED_Red;break;//电池电量不足
+		 case Battery_VeryLow:LEDMode=LED_RedBlink;break; //电池电量严重不足红色慢闪
+		}
+	}
+
 //电池详细电压显示的状态机处理
 static void BatVshowFSM(void)
 	{
@@ -76,8 +93,8 @@ static void BatVshowFSM(void)
 	//电量显示状态机
 	switch(VshowFSMState)
 		{
-		case BattVdis_Waiting:break; //等待显示阶段
 		case BattVdis_PrepareDis: //准备显示
+			if(VshowTIM)break;
 	    VshowTIM=14; //延迟1.75秒
 			VshowFSMState=BattVdis_DelayBeforeDisplay; //显示头部
 		  break;
@@ -122,13 +139,13 @@ static void BatVshowFSM(void)
 		//等待一段时间后显示当前电量
 		case BattVdis_WaitShowChargeLvl:
 			if(VshowTIM>0)break;
-		  BattShowTimer=12; //启动总体电量显示
-		  VshowFSMState=BattVdis_ShowChargeLvl; //等待电量显示状态结束
+			BattShowTimer=CurrentMode->ModeIdx!=Mode_OFF?0:12; //启动总体电量显示
+			VshowFSMState=BattVdis_ShowChargeLvl; //等待电量显示状态结束
       break;
 	  //等待总体电量显示结束
 		case BattVdis_ShowChargeLvl:
-			if(BattShowTimer||getSideKeyClickAndHoldEvent())break; //用户仍然按下按键，等待用户松开
-			VshowFSMState=BattVdis_Waiting; //显示结束，退回到等待阶段
+		  if(BattShowTimer)SetPowerLEDBasedOnVbatt(); //显示电量
+			else if(!getSideKeyNClickAndHoldEvent())VshowFSMState=BattVdis_Waiting; //用户仍然按下按键，等待用户松开,松开后回到等待阶段
       break;
 		}
 	}
@@ -171,20 +188,6 @@ static void ResetBattAvg(void)
 void DisplayVBattAtStart(void)
 	{
 	char i;
-	//复位电池异常标记位
-	IsBatteryAlert=0;
-	IsBatteryFault=0;
-	//启动电池电量显示(仅无错误且上次断电之前是关机状态的情况下)
-	if(CurrentMode->ModeIdx==Mode_OFF)
-		{
-	  for(i=0;i<VbattCellCount;i++)
-			 {
-			 MakeFastStrobe(LED_Amber);
-			 delay_ms(160);
-			 }
-		delay_ms(400);
-	  BattShowTimer=12;
-		}
 	//初始化平均值缓存
 	ResetBattAvg();
   //复位电池电压状态和电池显示状态机
@@ -195,6 +198,15 @@ void DisplayVBattAtStart(void)
 		Battery=Data.BatteryVoltage; //获取并更新电池电压
 		BatteryStateFSM(); //反复循环执行状态机更新到最终的电池状态
 		}
+	//启动电池电量显示(仅无错误且上次断电之前是关机状态的情况下)
+	if(CurrentMode->ModeIdx!=Mode_OFF)return;
+	for(i=0;i<VbattCellCount;i++)
+		{
+		MakeFastStrobe(LED_Amber);
+		delay_ms(160);
+		}
+	delay_ms(400);
+	BattShowTimer=12;
 	}
 //电池电量显示延时的处理
 void BattDisplayTIM(void)
@@ -241,14 +253,8 @@ void BatteryTelemHandler(void)
 	//LED控制
 	if(LEDMode==LED_RedBlinkFifth||LEDMode==LED_GreenBlinkThird||LEDMode==LED_RedBlinkThird)return; //频闪指示下不执行控制 
 	if(ErrCode!=Fault_None)DisplayErrorIDHandler(); //有故障发生，显示错误
-	else if(CurrentMode->ModeIdx!=Mode_OFF||BattShowTimer)switch(BattState) //用户长按按键查询电量或者手电开机，指示电量
-		 {
-		 case Battery_Plenty:LEDMode=LED_Green;break; //电池电量充足绿色常亮
-		 case Battery_Mid:LEDMode=LED_Amber;break; //电池电量中等黄色常亮
-		 case Battery_Low:LEDMode=LED_Red;break;//电池电量不足
-		 case Battery_VeryLow:LEDMode=LED_RedBlink;break; //电池电量严重不足红色慢闪
-		 }
-	else if(VshowFSMState!=BattVdis_Waiting)BatVshowFSM();//电池电压显示启动，执行状态机	
+	else if(VshowFSMState!=BattVdis_Waiting)BatVshowFSM();//电池电压显示启动，执行状态机
+	else if(CurrentMode->ModeIdx!=Mode_OFF||BattShowTimer)SetPowerLEDBasedOnVbatt(); //用户长按按键查询电量或者手电开机，指示电量
   else LEDMode=LED_OFF; //手电处于关闭状态，且没有按键按下的动静，故LED设置为关闭
 	}
 	

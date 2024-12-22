@@ -56,11 +56,8 @@ void OutputChannel_TestRun(void)
   xdata float buf,Err;
 	//准备启动输出
 	if(Data.RawBattVolt<5.5||CurrentMode->ModeIdx!=Mode_OFF)return; //输入电压过低避免误报，或者上次关机前没有熄灯，为了尽快点亮跳过检测
-	LShuntSEL=0;
-	HShuntSEL=0;
-	RevPGate=0; //关闭防反接检测PIN
-	PWM_ForceSetDuty(1); //打开PWMDAC输出一个初值		
-	DCDCEN=1; //令DCDCEN=1
+	PWM_ForceSetDuty(1); //打开PWMDAC输出一个初值确保运放输出不会摆到正轨		
+	DCDCEN=1; //令DCDCEN=1，启动DCDC
 	//等待DCDC启动	
 	do
 		{
@@ -130,7 +127,7 @@ void OutputChannel_Calc(void)
 	bit IsAux;
 	//根据当前传入电流和其余状态得出实际要怼入温控计算函数的电流
 	if(TailKeyTIM<(TailKeyRelTime+1))TargetCurrent=0; //当前进入掉电模式，立即关闭输出
-	else if(Current>TurboCurrent)TargetCurrent=TurboCurrent; //如果目标电流超过了限制值，则等于目标设置
+	else if(Current>TurboCurrent)TargetCurrent=TurboCurrent; //硬限幅，避免送入处理函数的电流值超过Strap的配置
 	else TargetCurrent=Current; //按照挡位状态机运算出来的结果填写  
 	//温控计算
   if(TargetCurrent>ThermalILIMCalc())TargetCurrent=ThermalILIMCalc(); //温控反馈的电流限制超过允许值
@@ -168,15 +165,15 @@ void OutputChannel_Calc(void)
 	else
 		{
 		//判断是否使用辅助通道
-		IsAux=CurrentBuf<AUXChannelImax?1:0;
+		IsAux=CurrentBuf<=AUXChannelImax?1:0;
 		//EN处于关闭状态，启用DCDC后令PWMDAC=0等待一段时间解决输出电流过冲导致闪烁的问题
 		if(!IsDCDCEnabled)
 				{
 				RevPGate=~IsAux;   //输入功率不大时下关闭防反接FET节省能量
 				DCDCEN=1;  
 				LShuntSEL=IsAux;  
-				HShuntSEL=~IsAux;  //启动DCDC，选择对应通道，延迟5mS后再送给定
-				delay_ms(5); 
+				HShuntSEL=~IsAux;  //启动DCDC，选择对应通道
+				delay_ms(CurrentMode->ModeIdx==Mode_Strobe?2:10); //让PWMDAC输出=0保持一段时间对输出电容进行预充电，然后再送给定值避免闪烁
 				IsDCDCEnabled=1; //标记DCDC已经开始运行
 				}
 		//设置输出占空比

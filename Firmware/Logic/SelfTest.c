@@ -40,6 +40,13 @@ void ReportError(FaultCodeDef Code)
 	SwitchToGear(Mode_Fault);  //指示故障发生
 	}
 
+//消除错误
+void ClearError(void)
+	{
+	ErrCode=Fault_None;
+	SwitchToGear(Mode_OFF);
+	}
+
 //错误ID显示计时函数	
 void DisplayErrorTIMHandler(void)	
 	{

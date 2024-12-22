@@ -121,8 +121,8 @@ static void ADC_WriteOutputBuf(int ADCResult,char Ch)
 //ADC异步引擎的主处理函数
 static void ADCEngineHandler(void)
 	{
-	int i,result;
-	char Ch;
+	int result;
+	char Ch,i;
 	//转换循环
   do
 		{
@@ -201,7 +201,6 @@ void ADC_DeInit(void)
 	ADCTemp.Ch=0;
 	ADCTemp.IsMissionProcessing=false;	
 	//将需要禁用的ADC输入GPIO设置为普通GPIO模式
-	GPIO_SetMUXMode(OPFBIOG,OPFBIOx,GPIO_AF_GPIO);
 	GPIO_SetMUXMode(VOUTFBIOG,VOUTFBIOx,GPIO_AF_GPIO);
 	GPIO_SetMUXMode(VBATInputIOG,VBATInputIOx,GPIO_AF_GPIO);
 	//将需要禁用的ADC输入设置为推挽输出
@@ -209,11 +208,9 @@ void ADC_DeInit(void)
   ADCDeInitCfg.Slew=GPIO_Slow_Slew;		
 	ADCDeInitCfg.DRVCurrent=GPIO_Low_Current; //配置为低电流推挽输出
 	
-	GPIO_ConfigGPIOMode(OPFBIOG,GPIOMask(OPFBIOx),&ADCDeInitCfg);
   GPIO_ConfigGPIOMode(VOUTFBIOG,GPIOMask(VOUTFBIOG),&ADCDeInitCfg); 
 	GPIO_ConfigGPIOMode(VBATInputIOG,GPIOMask(VBATInputIOx),&ADCDeInitCfg); 
 	//将需要禁用的ADC输入GPIO全部输出0
-	GPIO_WriteBit(OPFBIOG,OPFBIOx,0);
   GPIO_WriteBit(VBATInputIOG,VBATInputIOx,0);
 	GPIO_WriteBit(VOUTFBIOG,VOUTFBIOx,0);
 	//令NTC偏压供电输出=0关闭NTC和Strap电源
@@ -228,13 +225,15 @@ void ADC_Init(void)
 	ADCInitCfg.Mode=GPIO_Input_Floating;
   ADCInitCfg.Slew=GPIO_Slow_Slew;		
 	ADCInitCfg.DRVCurrent=GPIO_Low_Current; //配置为浮空输入	
-	
-	GPIO_ConfigGPIOMode(OPFBIOG,GPIOMask(OPFBIOx),&ADCInitCfg);
+
 	GPIO_ConfigGPIOMode(BATTSELIOG,GPIOMask(BATTSELIOx),&ADCInitCfg); 
   GPIO_ConfigGPIOMode(VOUTFBIOG,GPIOMask(VOUTFBIOG),&ADCInitCfg); 
 	GPIO_ConfigGPIOMode(VBATInputIOG,GPIOMask(VBATInputIOx),&ADCInitCfg); 
 	GPIO_ConfigGPIOMode(NTCInputIOG,GPIOMask(NTCInputIOx),&ADCInitCfg); 	//将对应的IO设置为指定的模式
-		
+	//初始化运放输出反馈
+ 	ADCInitCfg.Mode=GPIO_IPD;	
+	GPIO_ConfigGPIOMode(OPFBIOG,GPIOMask(OPFBIOx),&ADCInitCfg); //运放输出给一个32K的下拉阻抗避免虚电
+	
 	GPIO_SetMUXMode(OPFBIOG,OPFBIOx,GPIO_AF_Analog);
 	GPIO_SetMUXMode(BATTSELIOG,BATTSELIOx,GPIO_AF_Analog);
   GPIO_SetMUXMode(NTCInputIOG,NTCInputIOx,GPIO_AF_Analog);
@@ -242,7 +241,6 @@ void ADC_Init(void)
 	GPIO_SetMUXMode(VBATInputIOG,VBATInputIOx,GPIO_AF_Analog); //将GPIO复用设置为模拟输入
 	//配置并打开NTC分压电阻的供电
 	ADCInitCfg.Mode=GPIO_Out_PP;
-  ADCInitCfg.Slew=GPIO_Slow_Slew;		
 	ADCInitCfg.DRVCurrent=GPIO_High_Current; 	 //大电流推挽输出
 		
 	GPIO_SetMUXMode(NTCENIOG,NTCENIOx,GPIO_AF_GPIO);

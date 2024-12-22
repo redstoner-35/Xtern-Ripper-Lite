@@ -52,6 +52,7 @@ void main()
 		//8Hz定时处理
 		if(!SysHBFlag)continue; //时间没到，跳过处理
 		SysHBFlag=0;
+		ThermalItgCalc(); //积分器计算
 		SideKey_TIM_Callback();//侧按按键的监测定时器处理
 		TailKeyCounter(); //计时器
 		BattDisplayTIM(); //电池电量显示TIM

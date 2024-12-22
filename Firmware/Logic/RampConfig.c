@@ -30,7 +30,7 @@ static u8 PEC8Check(char *DIN,long Len)
 //读取无极调光配置
 void ReadRampConfig(void)
 	{
-	int i;
+	char i;
 	extern code ModeStrDef ModeSettings[ModeTotalDepth];
 	RampROMImg ROMData;
 	//解锁flash并开始读取
@@ -56,7 +56,7 @@ void ReadRampConfig(void)
 //恢复到无极调光模式的最低电流
 void RestoreToMinimumRampCurrent(void)	
 	{
-	int i;
+	char i;
 	extern code ModeStrDef ModeSettings[ModeTotalDepth];
 	RampCfg.Current=800;
 	for(i=0;i<ModeTotalDepth;i++)if(ModeSettings[i].ModeIdx==Mode_Ramp)
@@ -66,7 +66,7 @@ void RestoreToMinimumRampCurrent(void)
 //保存无极调光配置
 void SaveRampConfig(bit IsForceSave)
 	{
-	int i;
+	char i;
 	RampROMImg ROMData,SavedData;
 	//解锁flash并开始读取
 	SetFlashState(1);

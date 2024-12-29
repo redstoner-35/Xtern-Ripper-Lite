@@ -2,6 +2,7 @@
 #define _SideKey_
 
 //按键检测延时(每个单位=0.125秒)
+#define LongPressTimeForTac 2 //开启战术模式后的长按按键检测延时(按下时间超过这个数值则判定为长按)
 #define LongPressTime 5 //长按按键检测延时(按下时间超过这个数值则判定为长按)
 #define ContShortPressWindow 4 //连续多次按下时侧按的检测释抑时间(在该时间以内按下的短按才算入短按次数内)
 #define KeyReleaseDetectMask 0xFF //按键按下的监测Mask
@@ -28,7 +29,7 @@ HoldEventDef HoldStat;
 
 //函数
 void SideKeyInit(void);
-int getSideKeyShortPressCount(bit IsRemoveResult);//获取侧按按键的单击和连击次数
+char getSideKeyShortPressCount(bit IsRemoveResult);//获取侧按按键的单击和连击次数
 bit getSideKeyLongPressEvent(void);//获得侧按按钮长按的事件
 bit getSideKeyHoldEvent(void);//获得侧按按钮一直按住的事件
 bit IsKeyEventOccurred(void); //检测是否有事件发生

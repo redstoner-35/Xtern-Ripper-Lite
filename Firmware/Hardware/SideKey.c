@@ -3,14 +3,16 @@
 #include "GPIO.h"
 #include "cms8s6990.h"
 #include "PinDefs.h"
-#include "ModeControl.h"
+#include "SpecialMode.h"
+
+//函数
+void LoadSleepTimer(void);
 
 //全局变量
 sbit KeyPress=SideKeyGPIOP^SideKeyGPIOx; //侧按按键输入
-static bit IsKeyPressed = 0; //按键是否按下
+static bit IsKeyPressed; //按键是否按下
 static unsigned char KeyTimer[2];//计时器0用于按键按下计时，计时器1用于连按检测计时
 static KeyEventStrDef Keyevent; //按键事件
-volatile int SleepTimer;
 
 //内部按键检测用的变量
 xdata unsigned char KeyState;
@@ -38,7 +40,7 @@ void SideKeyInit(void)
 	GPIO_SetExtIntMode(SideKeyGPIOG,SideKeyGPIOx,GPIO_Int_Falling);//设置为下降沿触发
 	EIP1|=0x04; //将按键中断设置为高优先级
 	//初始化结构体内容和定时器
-	SleepTimer=SleepTimeOut*8;//复位定时器
+	LoadSleepTimer();
 	KeyState=0xFF;
 	KeyTimer[0]=0x00;
 	KeyTimer[1]=0x00;
@@ -59,25 +61,18 @@ bit IsKeyEventOccurred(void)
 //侧按按键计时模块
 void SideKey_TIM_Callback(void)
   {
-	unsigned char buf;
-	//定时器0（用于按键短按和长按计时）
-	if(KeyTimer[0]&0x80)
-	  {
-		buf=KeyTimer[0]&0x7F;
-		if(buf<(unsigned char)LongPressTime)buf++;
-		KeyTimer[0]&=0x80;
-		KeyTimer[0]|=buf; //将数值取出来，加1再写回去
+	unsigned char buf,i,Time;
+	extern bit IsTacMode;
+	//定时器处理（其中0用于短按/长按判断计时，1用于连续短按终止计时）
+	for(i=0;i<2;i++)if(KeyTimer[i]&0x80)
+		{
+		buf=KeyTimer[i]&0x7F;
+		if(!i)Time=SysMode?(unsigned char)LongPressTimeForTac:(unsigned char)LongPressTime;
+		else Time=(unsigned char)ContShortPressWindow;
+		if(buf<Time)buf++;
+		KeyTimer[i]&=0x80;
+		KeyTimer[i]|=buf; //将数值取出来，加1再写回去
 		}
-	else KeyTimer[0]=0; //定时器关闭
-	//定时器1（用于按键连按检测）
-  if(KeyTimer[1]&0x80)
-	  {
-		buf=KeyTimer[1]&0x7F;
-		if(buf<(unsigned char)ContShortPressWindow)buf++;
-		KeyTimer[1]&=0x80;
-		KeyTimer[1]|=buf; //将数值取出来，加1再写回去
-		}
-	else KeyTimer[1]=0; //定时器关闭
 	}
 
 //侧按GPIO中断回调处理
@@ -105,7 +100,6 @@ void SideKey_Int_Callback(void)
 	else
 		{
 		IsKeyPressed = 1;//标记按键按下
-		SleepTimer=8*SleepTimeOut; //睡眠时间延长
 		if(KeyTimer[1]&0x80)KeyTimer[1]=0x80;//复位
 		if(!(KeyTimer[0]&0x80))KeyTimer[0]=0x80;//启动计时
 		}
@@ -134,16 +128,13 @@ static void ClickAndHoldEventHandler(int PressCount)
 	Keyevent.ShortPressCount=0; //短按次数为0
 	Keyevent.LongPressDetected=0;
 	//多击+长按
-	switch(PressCount)
-		{
-		case 1: Keyevent.HoldStat=HoldEvent_1H;break;
-		case 2: Keyevent.HoldStat=HoldEvent_2H;break;
-		}
+	Keyevent.HoldStat=(HoldEventDef)(PressCount+1);
 	}
 //侧按键逻辑处理函数
 void SideKey_LogicHandler(void)
   {		
 	unsigned char buf;
+	extern bit IsTacMode;
 	//对按键进行去抖以及重新打开中断的判断
 	if(!GPIO_CheckIfIntEnabled(SideKeyGPIOG,GPIOMask(SideKeyGPIOx)))
 		{
@@ -154,6 +145,7 @@ void SideKey_LogicHandler(void)
 		buf=KeyState&KeyReleaseDetectMask;	
 		if(buf==KeyReleaseDetectMask||buf==0x00)
 			{
+			LoadSleepTimer(); //加载定时器
 			ClearKeyIntFlag();//清除按键响应的Flag
 			IsKeyPressed=buf==KeyReleaseDetectMask?0:1; //更新按键状态	
 			GPIO_SetExtIntMode(SideKeyGPIOG,SideKeyGPIOx,buf==KeyReleaseDetectMask?GPIO_Int_Falling:GPIO_Int_Rising);//如果当前按键是松开状态则设置为下降沿，否则设置为上升沿
@@ -163,7 +155,8 @@ void SideKey_LogicHandler(void)
 	//如果按键释放等待计时器在计时的话，则重置定时器
   if(IsKeyPressed&&(KeyTimer[1]&0x80))KeyTimer[1]=0x80;
 	//长按3秒的时间到
-	if(IsKeyPressed&&KeyTimer[0]==0x80+(unsigned char)LongPressTime)
+	buf=!SysMode?0x80+(unsigned char)LongPressTime:0x80+(unsigned char)LongPressTimeForTac; //动态计算长按事件结束的时间
+	if(IsKeyPressed&&KeyTimer[0]==buf)
 		{
     //处理多击+长按事件
     if(Keyevent.ShortPressCount>0)ClickAndHoldEventHandler(Keyevent.ShortPressCount);
@@ -186,7 +179,7 @@ void SideKey_LogicHandler(void)
 		}
 	}
 //获取侧按键点按次数的获取函数
-int getSideKeyShortPressCount(bit IsRemoveResult)
+char getSideKeyShortPressCount(bit IsRemoveResult)
   {
   short buf;
 	if(Keyevent.HoldStat!=HoldEvent_None)return 0;

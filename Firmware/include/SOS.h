@@ -20,7 +20,7 @@ typedef enum
 #define SOSFinishGapTime 35 //每轮SOS发出结束后的等待时间	
 
 //函数
-int SOSFSM(void);	//SOS状态机处理模块
+char SOSFSM(void);	//SOS状态机处理模块
 void SOSTIMHandler(void);//SOS状态机的时序处理
 void ResetSOSModule(void);	//复位整个SOS模块
 	

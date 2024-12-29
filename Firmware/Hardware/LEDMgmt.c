@@ -4,11 +4,16 @@
 #include "PinDefs.h"
 #include "cms8s6990.h"
 
+//全局变量
 volatile LEDStateDef LEDMode; 
 static char timer;
 bit IsHalfBrightness;
-static xdata char StepDownTIM; 
 
+//函数
+bit ShowThermalStepDown(void);	//显示温度控制启动	
+bit DisplayTacModeEnabled(void); //显示战术模式启动
+
+//设置LED亮度
 static void SetLEDBrightNess(void)
 	{
 	//设置占空比寄存器
@@ -29,7 +34,6 @@ void LED_Init(void)
   LEDInitCfg.Slew=GPIO_Slow_Slew;		
 	LEDInitCfg.DRVCurrent=GPIO_High_Current; //配置为低斜率大电流的推挽输出
 	//初始化模式设置
-	StepDownTIM=0;
 	LEDMode=LED_OFF;
 	//配置PWM发生器
 	PWM23PSC=0x01;  //打开预分频器和计数器时钟 
@@ -63,34 +67,32 @@ static void SetLEDONOFF(bit RLED,bit GLED)
 	else buf|=0x08; //控制PWM通道3是否正常输出来打开关闭绿色LED
 	PWMMASKE=buf;
 	}		
-	
+
 //LED控制函数
 void LEDControlHandler(void)
 	{
 	char buf;
-	bit IsLEDON,RLED,GLED;
-	extern bit IsThermalStepDown;
-	//短时间熄灭提示降档
-	if(IsThermalStepDown)
+	bit IsLEDON,RLED=0,GLED=0;
+	//执行特殊的逻辑（战术模式指示等）
+	if(LEDMode<LED_RedBlinkFifth) //非一次性状态，进行降档和战术模式指示判断
 		{
-		if(StepDownTIM<12)StepDownTIM++; //时间没到，继续累加时间
-			else //时间到，本周期侧按LED强制熄灭
+		if(DisplayTacModeEnabled()) //战术显示启动，降低LED亮度
 			{
-			StepDownTIM=0;
-			SetLEDONOFF(0,0); 
-			return;
+			IsHalfBrightness=1;
+			GLED=1;  //战术模式的指示使用半亮度配置，点亮绿灯作为提示
+			RLED=1; //标记需要跳过状态机运行
 			}
+		else if(ShowThermalStepDown())RLED=1; //标记需要跳过状态机运行
 		}
-	//据目标模式设置LED状态
-	switch(LEDMode)
+	//根据index设置LED状态
+	if(!RLED)switch(LEDMode)
 		{
-		case LED_OFF:RLED=0;GLED=0;timer=0;break; //LED关闭
+		case LED_OFF:timer=0;break; //LED关闭
 		case LED_Amber:RLED=1;GLED=1;break;//黄色LED
-		case LED_Green:RLED=0;GLED=1;break;//绿色LED
-		case LED_Red:RLED=1;GLED=0;break;//红色LED
+		case LED_Green:GLED=1;break;//绿色LED
+		case LED_Red:RLED=1;break;//红色LED
 		case LED_RedBlink_Fast: //红色快闪	
 		case LED_RedBlink: //红色闪烁
-			GLED=0;
 		  buf=timer&0x7F; //读取当前定时器的控制位
 			if(buf<(LEDMode==LED_RedBlink?3:0))
 				{
@@ -105,21 +107,18 @@ void LEDControlHandler(void)
 		case LED_RedBlinkThird: //LED红色闪烁3次
 		case LED_RedBlinkFifth: //LED红色闪烁5次
 			timer&=0x7F; //去掉最上面的位
-			if(timer>((LEDMode==LED_RedBlinkThird||LEDMode==LED_GreenBlinkThird)?6:10))
-				{
-				GLED=0; //绿色LED持续关闭
-				RLED=0;
-				LEDMode=LED_OFF; //时间到，关闭识别
-				}
+			if(timer>((LEDMode==LED_RedBlinkThird||LEDMode==LED_GreenBlinkThird)?6:10))LEDMode=LED_OFF; //时间到，关闭识别
 			else //继续计时
 				{
 				IsLEDON=(timer%2)?1:0; //通过余2判断实现检测
-				RLED=LEDMode==LED_GreenBlinkThird?0:IsLEDON;
-				GLED=LEDMode==LED_GreenBlinkThird?IsLEDON:0;
+				if(LEDMode==LED_GreenBlinkThird)GLED=IsLEDON;
+				else RLED=IsLEDON;
 				timer++;
 				}		
 		  break;
 		}
+	//特殊指示操作需要跳过状态机，清零RLED标记位
+	else RLED=0;
 	//设置LED亮度
   SetLEDBrightNess();
 	SetLEDONOFF(RLED,GLED);
@@ -128,15 +127,14 @@ void LEDControlHandler(void)
 //制造一次快闪
 void MakeFastStrobe(LEDStateDef LEDMode)
 	{
-	bit RLED,GLED;
 	//打开LED
 	switch(LEDMode)
 		{
-		case LED_Green:RLED=0;GLED=1;break;//绿色LED
-		case LED_Red:RLED=1;GLED=0;break;//红色LED
-		case LED_Amber:RLED=1;GLED=1;break;//黄色LED
+		case LED_Green:SetLEDONOFF(0,1);break;//绿色LED
+		case LED_Red:SetLEDONOFF(1,0);break;//红色LED
+		case LED_Amber:SetLEDONOFF(1,1);break;//黄色LED
+		default:return; //非法值
 		}
-	SetLEDONOFF(RLED,GLED);
 	delay_ms(20);
 	//关闭LED
 	SetLEDONOFF(0,0);

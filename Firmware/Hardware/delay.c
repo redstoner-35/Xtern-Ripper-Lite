@@ -5,7 +5,7 @@
 #include "GPIO.h"
 
 volatile bit SysHBFlag=0; //系统心跳Flag
-volatile bit IsT0OVF=0; //T0已溢出
+volatile bit IsT0OVF; //T0已溢出
 volatile bit StrobeFlag=0; //爆闪Flag
 volatile char HBcounter; //心跳定时器计数
 
@@ -79,8 +79,7 @@ void delay_init()
 	TMOD|=0x01; //T0设置为使用Fext,16bit向上计数模式
 	TH0=0x00;
 	TL0=0x00; //初始化数值
-	IE=0x02; //令ET0=1，启用定时中断
-	IE|=0x80; //EA=1，启用全局总中断
+	IE=0x82; //令ET0=1，启用定时中断,EA=1，启用全局总中断
 	}
 #ifdef EnableMicroSecDelay
 //uS延迟

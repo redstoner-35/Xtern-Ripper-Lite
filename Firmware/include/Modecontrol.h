@@ -28,7 +28,7 @@ typedef enum
   Mode_Strobe, //爆闪		
 	Mode_SOS, //SOS挡位
 	}ModeIdxDef;
-
+	
 typedef struct
 	{
   ModeIdxDef ModeIdx;
@@ -47,7 +47,6 @@ extern RampConfigDef RampCfg; //无极调光配置
 extern bit IsRampEnabled; //是否启用无极调光	
 	
 //参数配置
-#define BatteryAlertDelay 9 //电池警报延迟	
 #define HoldSwitchDelay 6 // 长按换挡延迟	
 #define SleepTimeOut 5 //休眠状态延时	
 #define ModeTotalDepth 11 //系统一共有几个挡位			
@@ -60,5 +59,5 @@ void SwitchToGear(ModeIdxDef TargetMode);//换到指定挡位
 void ReturnToOFFState(void);//关机	
 void HoldSwitchGearCmdHandler(void); //换挡间隔生成	
 void ModeFSMInit(void); //初始化状态机	
-	
+
 #endif

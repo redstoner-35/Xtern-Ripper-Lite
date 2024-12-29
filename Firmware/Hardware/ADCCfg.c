@@ -67,7 +67,7 @@ static void ADC_SetVREF(bit IsUsingVDD)
 	ADC_EnableCmd(); //基准切换完毕，重新启动
 	}
 //转换完毕后写输出引擎
-char CalcNTCTemp(bool *IsNTCOK,unsigned long NTCRes); //函数声明		
+int	CalcNTCTemp(bool *IsNTCOK,unsigned long NTCRes); //函数声明		
 
 static void ADC_WriteOutputBuf(int ADCResult,char Ch)
 	{

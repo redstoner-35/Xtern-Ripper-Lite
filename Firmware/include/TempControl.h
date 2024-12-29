@@ -2,16 +2,16 @@
 #define _TC_
 
 //PI环参数和最小电流限制
-#define IntegralCurrentTrimValue 1600 //积分器针对输出的电流修调的最大值(mA)
-#define IntegralFactor 20 //积分系数(每单位=1/8秒，越大时间常数越高，6=每分钟进行40mA的调整)
-#define MinumumILED 1500 //降档系统所能达到的最低电流(mA)
+#define IntegralCurrentTrimValue 2000 //积分器针对输出的电流修调的最大值(mA)
+#define IntegralFactor 16 //积分系数(每单位=1/8秒，越大时间常数越高，6=每分钟进行40mA的调整)
+#define MinumumILED 2500 //降档系统所能达到的最低电流(mA)
 
 //温度配置
-#define ForceOffTemp 75 //过热关机温度
-#define ForceDisableTurboTemp 60 //超过此温度无法进入极亮
-#define TurboConstantTemperature 52 //极亮挡位的PID维持温度
-#define ConstantTemperature 47 //非极亮挡位温控启动后维持的温度
-#define ReleaseTemperature 41 //温控释放的温度
+#define ForceOffTemp 80 //过热关机温度
+#define ForceDisableTurboTemp 63 //超过此温度无法进入极亮
+#define TurboConstantTemperature 55 //极亮挡位的PID维持温度
+#define ConstantTemperature 50 //非极亮挡位温控启动后维持的温度
+#define ReleaseTemperature 45 //温控释放的温度
 
 /*   积分器满量程自动定义，切勿修改！    */
 #define IntegrateFullScale IntegralCurrentTrimValue*IntegralFactor
@@ -57,8 +57,12 @@
 
 //函数
 int ThermalILIMCalc(void); //根据温控模块计算电流限制
-void ThermalCalcProcess(void); //温控PI环处理和过热保护
+void ThermalMgmtProcess(void); //温控管理函数
 void RecalcPILoop(int LastCurrent); //换挡的时候重新计算PI环路
-void ThermalItgCalc(void);	//温控PI环中I项(积分器)的计算
+void ThermalPILoopCalc(void); //温控PI环路的计算
+
+//外部Flag
+extern bit IsDisableTurbo; //关闭极亮进入
+extern bit IsForceLeaveTurbo; //强制退出极亮
 
 #endif

@@ -5,17 +5,15 @@
  generator. DO NOT EDIT UNLESS YOU FULLY UNDERSTAND WHAT THIS
  FILE ACTUALLY DOES!
  NTC PARAMETER:100.00KΩ @ 25℃ B4250
- Table temperature range:-40℃ to 125℃
- Total ROM space for table:482 Bytes
+ Table temperature range:-24℃ to 100℃
+ Total ROM space for table:378 Bytes
  Target MCU Architecture:8051 Based MCU
 -------------------------------------------------------------*/
 
+//温度反馈的偏移值（如果你发现温度不准，可以在这里对温度监测系统进行TRIM）
+#define TemperatureReportOffset 0
 
-code unsigned long NTCTableTop[75]={
-5319893, 4921449, 4555863, 4220193,   //-40 到 -37 摄氏度
-3911778, 3628214, 3367323, 3127136,   //-36 到 -33 摄氏度
-2905863, 2701885, 2513729, 2340060,   //-32 到 -29 摄氏度
-2179661, 2031429, 1894357, 1767529,   //-28 到 -25 摄氏度
+code unsigned long NTCTableTop[59]={
 1650110, 1541338, 1440518, 1347015,   //-24 到 -21 摄氏度
 1260250, 1179691, 1104854, 1035294,   //-20 到 -17 摄氏度
 970604, 910411, 854373, 802176,   //-16 到 -13 摄氏度
@@ -32,7 +30,7 @@ code unsigned long NTCTableTop[75]={
 86762, 82802, 79048, 75487,   //28 到 31 摄氏度
 72108, 68901, 65857  };
 
-code unsigned int NTCTableBottom[91]={
+code unsigned int NTCTableBottom[71]={
 62965, 60218, 57607, 55125,   //35 到 38 摄氏度
 52765, 50520, 48384, 46350,   //39 到 42 摄氏度
 44415, 42572, 40816, 39143,   //43 到 46 摄氏度
@@ -49,41 +47,35 @@ code unsigned int NTCTableBottom[91]={
 8595, 8319, 8053, 7797,   //87 到 90 摄氏度
 7550, 7312, 7084, 6863,   //91 到 94 摄氏度
 6651, 6446, 6249, 6058,   //95 到 98 摄氏度
-5875, 5698, 5527, 5362,   //99 到 102 摄氏度
-5203, 5049, 4901, 4758,   //103 到 106 摄氏度
-4620, 4486, 4357, 4232,   //107 到 110 摄氏度
-4112, 3995, 3883, 3774,   //111 到 114 摄氏度
-3669, 3567, 3468, 3373,   //115 到 118 摄氏度
-3281, 3192, 3105, 3022,   //119 到 122 摄氏度
-2941, 2862, 2787  //123 到 125 摄氏度
+5875, 5698   //99 到 100 摄氏度
 };
 
 //NTC温度换算函数
 //传入参数：NTC阻值(Ω),温度是否有效的bool指针输出
 //返回参数：温度值(℃)
-char CalcNTCTemp(bool *IsNTCOK,unsigned long NTCRes){
+int CalcNTCTemp(bool *IsNTCOK,unsigned long NTCRes){
 char i;
 volatile unsigned long NTCTableValue;
 //电阻值大于查找表阻值上限，温度异常
-if(NTCRes>(unsigned long)5319893)
+if(NTCRes>(unsigned long)1650110)
   {
   *IsNTCOK=false;
-  return -40;
+  return -24+TemperatureReportOffset;
   }
 //电阻值小于查找表阻值的阻值下限，温度异常
-if(NTCRes<(unsigned long)2787)
+if(NTCRes<(unsigned long)5698)
   {
   *IsNTCOK=false;
-  return 125;
+  return 100+TemperatureReportOffset;
   }
 //温度正常，开始查表
 *IsNTCOK=true;
-if(NTCRes>(unsigned long)62965)for(i=0;i<75;i++)if(NTCTableTop[i]<=NTCRes)return -40+i;
-for(i=0;i<91;i++)
+if(NTCRes>(unsigned long)62965)for(i=0;i<59;i++)if(NTCTableTop[i]<=NTCRes)return (-24+TemperatureReportOffset)+i;
+for(i=0;i<71;i++)
   {
   NTCTableValue=(unsigned long)NTCTableBottom[i];
   NTCTableValue&=0xFFFF;
-  if(NTCTableValue<=NTCRes)return 35+i;
+  if(NTCTableValue<=NTCRes)return (TemperatureReportOffset+35)+i;
   }
 //数值查找失败，返回错误值
 *IsNTCOK=false;

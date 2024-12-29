@@ -3,7 +3,7 @@
 #include "GPIO.h"
 #include "PWMCfg.h"
 #include "delay.h"
-#include "ModeControl.h"
+#include "SpecialMode.h"
 #include "TempControl.h"
 #include "OutputChannel.h"
 #include "ADCCfg.h"
@@ -123,62 +123,65 @@ static float Duty_Calc(float ShuntmOhm,int CurrentInput)
 //输出通道计算
 void OutputChannel_Calc(void)
 	{
-	int TargetCurrent;
-	bit IsAux;
+	int TargetCurrent,ILIM;
+	bit IsMainChannel;
 	//根据当前传入电流和其余状态得出实际要怼入温控计算函数的电流
 	if(TailKeyTIM<(TailKeyRelTime+1))TargetCurrent=0; //当前进入掉电模式，立即关闭输出
-	else if(Current>TurboCurrent)TargetCurrent=TurboCurrent; //硬限幅，避免送入处理函数的电流值超过Strap的配置
 	else TargetCurrent=Current; //按照挡位状态机运算出来的结果填写  
 	//温控计算
-  if(TargetCurrent>ThermalILIMCalc())TargetCurrent=ThermalILIMCalc(); //温控反馈的电流限制超过允许值
+	ILIM=ThermalILIMCalc();
+	if(ILIM>TurboCurrent)ILIM=TurboCurrent; //限流值大于极亮允许值
+  if(TargetCurrent>ILIM)TargetCurrent=ILIM; //温控反馈的运行电流超过目标值，进行限流
 	//避免无效的重复计算
-	if(CurrentBuf==TargetCurrent)return;
-	//保护LED的电流斜率限制器
-	if(TargetCurrent-CurrentBuf>6000)IsSlowRamp=1; //监测到非常大的电流瞬态，避免冲爆灯珠采用软起
-  if(IsSlowRamp&&TargetCurrent>0)
+	if(CurrentBuf==TargetCurrent)return;	
+	//电流大于0开启输出，选择对应通道
+	if(TargetCurrent>0)
 		{
-		if(CurrentBuf==0)CurrentBuf=1500; //电流为0从1500开始输出
-		else switch(CurrentMode->ModeIdx)
+		//保护LED的电流斜率限制器
+		if(TargetCurrent-CurrentBuf>6000)IsSlowRamp=1; //监测到非常大的电流瞬态，避免冲爆灯珠采用软起
+		if(!SysMode&&IsSlowRamp)
 			{
-			case Mode_Strobe:CurrentBuf+=3000;break;
-			case Mode_SOS:CurrentBuf+=500;break;
-			default:CurrentBuf+=20;
+			if(CurrentBuf==0)CurrentBuf=1500; //电流为0从1500开始输出
+			else switch(CurrentMode->ModeIdx)
+				{
+				case Mode_Strobe:CurrentBuf+=3000;break;
+				case Mode_SOS:CurrentBuf+=500;break;
+				default:CurrentBuf+=20;
+				}
+			if(CurrentBuf>=TargetCurrent)
+				{
+				IsSlowRamp=0;
+				CurrentBuf=TargetCurrent; //限幅，不允许目标电流大于允许值
+				}
 			}
-		if(CurrentBuf>=TargetCurrent)
-			{
-			IsSlowRamp=0;
-			CurrentBuf=TargetCurrent; //限幅，不允许目标电流大于允许值
-			}
-		}
-	else CurrentBuf=TargetCurrent; //直接同步
-	//电流小于等于0，关闭所有输出
-	if(CurrentBuf<=0)
-		{
-		DCDCEN=0;
-	  PWMDuty=0;			//DCDC被关闭，禁用输出
-		IsDCDCEnabled=0;  //标记DCDC已被关闭
-		RevPGate=CurrentBuf==-1?1:0; //复位防反接MOS
-		LShuntSEL=0;
-		HShuntSEL=0;  //复位检流选择MOS
-		}
-	//输出开启，选择对应通道
-	else
-		{
+		else CurrentBuf=TargetCurrent; //直接同步		
 		//判断是否使用辅助通道
-		IsAux=CurrentBuf<=AUXChannelImax?1:0;
+		IsMainChannel=CurrentBuf>AUXChannelImax?1:0;
 		//EN处于关闭状态，启用DCDC后令PWMDAC=0等待一段时间解决输出电流过冲导致闪烁的问题
 		if(!IsDCDCEnabled)
 				{
-				RevPGate=~IsAux;   //输入功率不大时下关闭防反接FET节省能量
+				RevPGate=IsMainChannel;   //输入功率不大时下关闭防反接FET节省能量
 				DCDCEN=1;  
-				LShuntSEL=IsAux;  
-				HShuntSEL=~IsAux;  //启动DCDC，选择对应通道
+				LShuntSEL=IsMainChannel?0:1;  
+				HShuntSEL=IsMainChannel;  //启动DCDC，选择对应通道
 				delay_ms(CurrentMode->ModeIdx==Mode_Strobe?2:10); //让PWMDAC输出=0保持一段时间对输出电容进行预充电，然后再送给定值避免闪烁
 				IsDCDCEnabled=1; //标记DCDC已经开始运行
 				}
 		//设置输出占空比
-		PWMDuty=Duty_Calc(IsAux?AUXChannelShuntmOhm:MainChannelShuntmOhm,CurrentBuf);
+		PWMDuty=Duty_Calc(IsMainChannel?MainChannelShuntmOhm:AUXChannelShuntmOhm,CurrentBuf);
 		}
+	//电流等于0，关闭所有输出
+	else
+		{
+		DCDCEN=0;
+	  PWMDuty=0;			//DCDC被关闭，禁用输出
+		IsDCDCEnabled=0;  //标记DCDC已被关闭
+		RevPGate=0; //复位防反接MOS
+		LShuntSEL=0;
+		HShuntSEL=0;  //复位检流选择MOS
+		//电流输出为0
+		CurrentBuf=0;
+		}	
 	//更新完毕上传PWM数值
 	IsNeedToUploadPWM=1;
 	}

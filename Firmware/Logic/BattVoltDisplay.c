@@ -3,7 +3,6 @@
 #include "delay.h"
 #include "ModeControl.h"
 #include "SideKey.h"
-#include "cms8s6990.h"
 #include "BattDisplay.h"
 #include "Strap.h"
 #include "SelfTest.h"
@@ -12,14 +11,16 @@
 bit IsBatteryAlert; //电池电压低于警告值	
 bit IsBatteryFault; //电池电压低于保护值		
 
-//内部全局变量
+//内部变量
 static char BattShowTimer; //电池电量显示计时
-BattStatusDef BattState; //电池电量标记位
 static xdata AverageCalcDef BattVolt;	
-xdata float Battery; //等效单节电池电压
 static xdata int VshowTIM;
 static char LowVoltStrobeTIM;
 static xdata float VbattSample; //取样的电池电压
+
+//外部全局变量
+BattStatusDef BattState; //电池电量标记位
+xdata float Battery; //等效单节电池电压
 xdata BattVshowFSMDef VshowFSMState; //电池电压显示所需的计时器和状态机转移
 
 //启动电池电压显示
@@ -188,7 +189,7 @@ static void ResetBattAvg(void)
 void DisplayVBattAtStart(void)
 	{
 	char i;
-	//初始化平均值缓存
+	//初始化平均值缓存,复位标志位
 	ResetBattAvg();
   //复位电池电压状态和电池显示状态机
   VshowFSMState=BattVdis_Waiting;		
@@ -230,28 +231,29 @@ void BattDisplayTIM(void)
 		}
 	//低电压提示闪烁计时器
 	if(LowVoltStrobeTIM==LowVoltStrobeGap*8)LowVoltStrobeTIM=1;//时间到清除数值重新计时
-	else if(LowVoltStrobeTIM>0)LowVoltStrobeTIM++;
+	else if(LowVoltStrobeTIM)LowVoltStrobeTIM++;
 	//电池电压显示的计时器处理	
-	if(VshowTIM>0)VshowTIM--;
+	if(VshowTIM)VshowTIM--;
 	//电池显示定时器
-	if(BattShowTimer>0)BattShowTimer--;
+	if(BattShowTimer)BattShowTimer--;
 	}
-	
+
 //电池参数测量和指示灯控制
 void BatteryTelemHandler(void)
 	{
-	float AlertThr;
+	int AlertThr,VBatt;
 	//根据电池电压控制flag实现低电压降档和关机保护
-	if(CurrentMode->ModeIdx==Mode_Ramp)AlertThr=(float)RampCfg.BattThres/(float)1000; //无极调光模式下，使用结构体内的动态阈值
-	else AlertThr=(float)(CurrentMode->LowVoltThres)/(float)1000; //从当前目标挡位读取模式值  
-	IsBatteryFault=Battery>2.7?0:1; //故障bit
+	if(CurrentMode->ModeIdx==Mode_Ramp)AlertThr=RampCfg.BattThres; //无极调光模式下，使用结构体内的动态阈值
+	else AlertThr=CurrentMode->LowVoltThres; //从当前目标挡位读取模式值  
+	VBatt=(int)(Battery*1000); //得到电池电压(mV)
+	IsBatteryFault=VBatt>2700?0:1; //故障bit
 	if(IsBatteryFault)IsBatteryAlert=0; //故障bit置起后强制清除警报bit
 	else if(Data.VOUTRatio>75)IsBatteryAlert=1; //输出输入比值大于75%，DCDC芯片已经饱和，强制降档
-	else IsBatteryAlert=Battery>AlertThr?0:1; //警报bit
+	else IsBatteryAlert=VBatt>AlertThr?0:1; //警报bit
 	//电池电量指示状态机
 	BatteryStateFSM();
 	//LED控制
-	if(LEDMode==LED_RedBlinkFifth||LEDMode==LED_GreenBlinkThird||LEDMode==LED_RedBlinkThird)return; //频闪指示下不执行控制 
+	if(IsOneTimeStrobe())return; //为了避免干扰只工作一次的频闪指示，不执行控制 
 	if(ErrCode!=Fault_None)DisplayErrorIDHandler(); //有故障发生，显示错误
 	else if(VshowFSMState!=BattVdis_Waiting)BatVshowFSM();//电池电压显示启动，执行状态机
 	else if(CurrentMode->ModeIdx!=Mode_OFF||BattShowTimer)SetPowerLEDBasedOnVbatt(); //用户长按按键查询电量或者手电开机，指示电量

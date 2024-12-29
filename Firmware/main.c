@@ -13,6 +13,7 @@
 #include "Strap.h"
 #include "SOS.h"
 #include "SelfTest.h"
+#include "LowVoltProt.h"
 
 //函数声明
 void SleepMgmt(void);
@@ -36,7 +37,7 @@ void main()
 	OutputChannel_TestRun(); //输出通道试运行
 	DisplayVBattAtStart(); //显示输出电压
 	EnableADCAsync(); //启动ADC的异步模式提高处理速度
-	IRQ_ALL_ENABLE(); //打开所有中断
+	EA=1; //打开所有中断
 	//主循环	
   while(1)
 		{
@@ -46,17 +47,18 @@ void main()
 		TailKey_Handler(); //处理尾按事务
 		BatteryTelemHandler(); //处理电池遥测
 		ModeSwitchFSM(); //挡位状态机
-		ThermalCalcProcess(); //温控PI环路计算和过热保护
+		ThermalMgmtProcess(); //温度管理函数过热保护等
 		OutputChannel_Calc(); //根据电流进行输出通道控制
 		PWM_OutputCtrlHandler(); //处理PWM输出事务	
 		//8Hz定时处理
 		if(!SysHBFlag)continue; //时间没到，跳过处理
 		SysHBFlag=0;
-		ThermalItgCalc(); //积分器计算
+		ThermalPILoopCalc(); //积分器计算
 		SideKey_TIM_Callback();//侧按按键的监测定时器处理
 		TailKeyCounter(); //计时器
 		BattDisplayTIM(); //电池电量显示TIM
 		SOSTIMHandler(); //SOS计时器
+		BattAlertTIMHandler(); //电池警报定时处理
 		ModeFSMTIMHandler(); //模式状态机
 		HoldSwitchGearCmdHandler(); //长按换挡
 		DisplayErrorTIMHandler(); //故障代码显示

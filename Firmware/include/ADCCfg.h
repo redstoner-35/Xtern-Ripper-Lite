@@ -6,7 +6,7 @@
 //结构体
 typedef struct
 	{
-  char Systemp; //系统温度
+  int Systemp; //系统温度
 	float OutputVoltage; //DCDC输出电压(V)
 	float BatteryVoltage; //等效单节电池电压(V)
 	float RawBattVolt; //原始的电池电压(V)

@@ -501,6 +501,16 @@
               <FileType>1</FileType>
               <FilePath>.\Logic\SOS.c</FilePath>
             </File>
+            <File>
+              <FileName>LowVoltageProt.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Logic\LowVoltageProt.c</FilePath>
+            </File>
+            <File>
+              <FileName>SpecialMode.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Logic\SpecialMode.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>
